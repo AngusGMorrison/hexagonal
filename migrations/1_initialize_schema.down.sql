@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS bank_accounts CASCADE;
+DROP TABLE IF EXISTS transactions;

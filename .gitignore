@@ -1,0 +1,6 @@
+bin
+vendor
+coverage.txt
+coverage.xml
+.idea
+.vscode
