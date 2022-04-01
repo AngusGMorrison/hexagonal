@@ -17,22 +17,27 @@ import (
 func main() {
 	logger := log.New(os.Stdout, "hexagonal_migrate ", log.LstdFlags)
 
+	if err := run(logger); err != nil {
+		logger.Panic(err)
+	}
+}
+
+func run(logger *log.Logger) error {
 	// Load environment variables.
 	env, err := envconfig.New()
 	if err != nil {
-		logger.Panic(err)
+		return fmt.Errorf("create envconfig: %w", err)
 	}
 
 	// Set up the server's IO dependencies.
 	db, err := postgres.New(env.DB)
 	if err != nil {
-		logger.Panic(err)
+		return fmt.Errorf("create database: %w", err)
 	}
 
 	defer func() {
-		err := db.Close()
-		if err != nil {
-			logger.Panic(fmt.Errorf("failed to close db: %w", err))
+		if err := db.Close(); err != nil {
+			logger.Printf("close database: %v", err)
 		}
 	}()
 
@@ -47,15 +52,17 @@ func main() {
 	// Create the server, injecting dependencies.
 	svr, err := server.New(serverConfig)
 	if err != nil {
-		logger.Panic(err)
+		return fmt.Errorf("create server: %w", err)
 	}
 
 	svr.Run()
 
 	// Monitor the running program for server errors and interrupts.
 	if err = supervise(svr, logger); err != nil {
-		logger.Panic(err)
+		return fmt.Errorf("supervisor: %w", err)
 	}
+
+	return nil
 }
 
 // supervise monitors the running program, shutting down if the server fails or
