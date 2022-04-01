@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
 	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
@@ -14,18 +13,14 @@ import (
 // Repository provides access to the database tables of the transfers domain,
 // including bank account and transactions.
 type Repository struct {
-	logger *log.Logger
 	*postgres.Postgres
 }
 
 // Statically verify that Repository satisfies transferdomain.Repository.
 var _ transferdomain.Repository = (*Repository)(nil)
 
-func New(p *postgres.Postgres, logger *log.Logger) *Repository {
-	return &Repository{
-		logger:   logger,
-		Postgres: p,
-	}
+func New(p *postgres.Postgres) *Repository {
+	return &Repository{Postgres: p}
 }
 
 const getBankAccountQuery = `

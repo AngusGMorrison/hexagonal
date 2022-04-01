@@ -36,7 +36,7 @@ func main() {
 		}
 	}()
 
-	transferRepo := transferrepo.New(db, logger)
+	transferRepo := transferrepo.New(db)
 	transferService := transferdomain.NewService(transferRepo)
 	serverConfig := server.Config{
 		Env:             env,
