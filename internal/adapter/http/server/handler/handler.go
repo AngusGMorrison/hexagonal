@@ -52,14 +52,14 @@ type bulkTransferRequest struct {
 	CreditTransfers  creditTransfers `json:"credit_transfers" binding:"required"`
 }
 
-func (btr bulkTransferRequest) ToDomain() transferBulkTransfer {
-	bt := transferBulkTransfer{
+func (btr bulkTransferRequest) ToDomain() transferdomain.BulkTransfer {
+	bt := transferdomain.BulkTransfer{
 		Account: transferdomain.BankAccount{
 			OrganizationName: btr.OrganizationName,
 			OrganizationBIC:  btr.OrganizationBIC,
 			OrganizationIBAN: btr.OrganizationIBAN,
 		},
-		CreditTransfers: btr.CredittransfertoDomain(),
+		CreditTransfers: btr.CreditTransfers.toDomain(),
 	}
 
 	return bt

@@ -8,6 +8,16 @@ This demo provides an HTTP server with one endpoint: `/bulk_transfers`, which re
 
 This project uses docker-compose to run both the `hexagonal` application and a PostgreSQL server.
 
+Before running the application, create the databases `hexagonal_development` and `hexagonal_test` using `psql`:
+```bash
+docker-compose up -d postgres
+docker-compose exec postgres psql -U postgres
+```
+```sql
+CREATE DATABASE hexagonal_development;
+CREATE DATABASE hexagonal_test;
+```
+
 ```bash
 docker-compose up hexagonal
 ```

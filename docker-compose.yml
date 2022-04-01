@@ -1,0 +1,37 @@
+services:
+  hexagonal:
+    tty: true
+    stdin_open: true
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: hexagonal
+    env_file: ./dev.env
+    ports:
+      - 3000:3000
+    depends_on:
+      - postgres
+    command:
+      [
+        "./scripts/wait_for.sh",
+        "postgres:5432",
+        "-t",
+        "5",
+        "--",
+        "make",
+        "run"
+      ]
+    volumes:
+      - .:/usr/src/app:cached
+
+  postgres:
+    image: postgres:14.2
+    env_file: ./postgres.env
+    ports:
+      - 5432:5432
+    volumes:
+      - data_pg14:/var/lib/postgresql/14/data:cached
+
+volumes:
+  data_pg14:
+    external: false

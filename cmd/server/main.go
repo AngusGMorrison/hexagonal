@@ -18,7 +18,7 @@ func main() {
 	logger := log.New(os.Stdout, "hexagonal_migrate ", log.LstdFlags)
 
 	// Load environment variables.
-	env, err := envconfig.GetEnv()
+	env, err := envconfig.New()
 	if err != nil {
 		logger.Panic(err)
 	}

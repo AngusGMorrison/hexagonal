@@ -26,7 +26,7 @@ type Server struct {
 	*http.Server
 
 	log         *log.Logger
-	config      config.HTTP
+	config      envconfig.HTTP
 	errorStream chan error
 }
 
