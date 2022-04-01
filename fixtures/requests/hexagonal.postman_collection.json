@@ -1,0 +1,63 @@
+{
+	"info": {
+		"_postman_id": "730c90b3-368b-401f-a53a-5ee7d16285c5",
+		"name": "Hexagonal",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Sample 1: Insufficient funds",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"organization_name\": \"ACME Corp\",\n  \"organization_bic\": \"OIVUSCLQXXX\",\n  \"organization_iban\": \"FR10474608000002006107XXXXX\",\n  \"credit_transfers\": [\n    {\n      \"amount\": \"23.17\",\n      \"currency\": \"EUR\",\n      \"counterparty_name\": \"Bip Bip\",\n      \"counterparty_bic\": \"CRLYFRPPTOU\",\n      \"counterparty_iban\": \"EE383680981021245685\",\n      \"description\": \"Neverland/6318\"\n    },\n    {\n      \"amount\": \"98234\",\n      \"currency\": \"EUR\",\n      \"counterparty_name\": \"Wile E Coyote\",\n      \"counterparty_bic\": \"ZDRPLBQI\",\n      \"counterparty_iban\": \"DE9935420810036209081725212\",\n      \"description\": \"//Spacex/AJGRBX/32\"\n    },\n    {\n      \"amount\": \"8024.99\",\n      \"currency\": \"EUR\",\n      \"counterparty_name\": \"Bugs Bunny\",\n      \"counterparty_bic\": \"RNJZNTMC\",\n      \"counterparty_iban\": \"FR0010009380540930414023042\",\n      \"description\": \"2020/DuckSeason/\"\n    },\n    {\n      \"amount\": \"200\",\n      \"currency\": \"EUR\",\n      \"counterparty_name\": \"Daffy Duck\",\n      \"counterparty_bic\": \"DDFCNLAM\",\n      \"counterparty_iban\": \"NL24ABNA5055036109\",\n      \"description\": \"2020/RabbitSeason/\"\n    }\n  ]\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:3000/bulk_transfer",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"bulk_transfer"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Sample 2: Success",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"organization_name\": \"ACME Corp\",\n  \"organization_bic\": \"OIVUSCLQXXX\",\n  \"organization_iban\": \"FR10474608000002006107XXXXX\",\n  \"credit_transfers\": [\n    {\n      \"amount\": \"14.5\",\n      \"currency\": \"EUR\",\n      \"counterparty_name\": \"Bip Bip\",\n      \"counterparty_bic\": \"CRLYFRPPTOU\",\n      \"counterparty_iban\": \"EE383680981021245685\",\n      \"description\": \"Wonderland/4410\"\n    },\n    {\n      \"amount\": \"61238\",\n      \"currency\": \"EUR\",\n      \"counterparty_name\": \"Wile E Coyote\",\n      \"counterparty_bic\": \"ZDRPLBQI\",\n      \"counterparty_iban\": \"DE9935420810036209081725212\",\n      \"description\": \"//TeslaMotors/Invoice/12\"\n    },\n    {\n      \"amount\": \"999\",\n      \"currency\": \"EUR\",\n      \"counterparty_name\": \"Bugs Bunny\",\n      \"counterparty_bic\": \"RNJZNTMC\",\n      \"counterparty_iban\": \"FR0010009380540930414023042\",\n      \"description\": \"2020 09 24/2020 09 25/GoldenCarrot/\"\n    }\n  ]\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:3000/bulk_transfer",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"bulk_transfer"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
