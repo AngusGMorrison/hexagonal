@@ -15,10 +15,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var (
-	ErrEnvNotSupported = errors.New("environment not supported")
-	ErrServerClosed    = http.ErrServerClosed
-)
+var ErrServerClosed = http.ErrServerClosed
+
+// EnvNotSupportedError represents a failure to match an environment string
+// passed in a server's Config.
+type EnvNotSupportedError struct {
+	env string
+}
+
+func (e EnvNotSupportedError) Error() string {
+	return fmt.Sprintf("unsupported env %q", e.env)
+}
 
 // Server wraps a standard library server, providing support for
 // application-specific methods.
@@ -119,7 +126,7 @@ func newGinEngine(env string) (*gin.Engine, error) {
 
 		middleware = globalDevelopmentMiddleware()
 	default:
-		return nil, fmt.Errorf("%w: %s", ErrEnvNotSupported, env)
+		return nil, EnvNotSupportedError{env: env}
 	}
 
 	engine := gin.New()
