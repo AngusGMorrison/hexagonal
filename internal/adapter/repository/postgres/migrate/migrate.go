@@ -11,7 +11,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-const migrationPath = "file://migrations"
+const _migrationPath = "file://migrations"
 
 // Config is a configuration object for migrations.
 type Config struct {
@@ -51,7 +51,7 @@ type migrator struct {
 }
 
 func newMigrator(databaseURL string, logger *log.Logger, config Config) (*migrator, error) {
-	inner, err := migrate.New(migrationPath, databaseURL)
+	inner, err := migrate.New(_migrationPath, databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("create new migrator: %w", err)
 	}
