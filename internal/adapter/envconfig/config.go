@@ -35,6 +35,7 @@ type EnvConfig struct {
 type App struct {
 	Name string `envconfig:"APP_NAME" default:"hexagonal"`
 	Env  string `envconfig:"APP_ENV" required:"true"`
+	Root string `envconfig:"APP_ROOT" required:"true"`
 }
 
 // HTTP represents all HTTP-related environment variables.

@@ -41,8 +41,13 @@ func run(logger *log.Logger) error {
 		}
 	}()
 
-	transferRepo := transferrepo.New(pg)
+	transferRepo, err := transferrepo.New(pg)
+	if err != nil {
+		return fmt.Errorf("create transfer Repository: %w", err)
+	}
+
 	transferService := transferdomain.NewService(transferRepo)
+
 	serverConfig := server.Config{
 		Env:             env,
 		Logger:          logger,

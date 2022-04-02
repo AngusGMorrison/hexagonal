@@ -14,40 +14,26 @@ import (
 // including bank account and transactions.
 type Repository struct {
 	postgres *postgres.Postgres
+	queries  queries
 }
 
 // Statically verify that Repository satisfies transferdomain.Repository.
 var _ transferdomain.Repository = (*Repository)(nil)
 
 // New returns a new Repository.
-func New(pg *postgres.Postgres) *Repository {
-	return &Repository{postgres: pg}
+func New(pg *postgres.Postgres) (*Repository, error) {
+	q, err := loadQueries()
+	if err != nil {
+		return nil, fmt.Errorf("loadQueries: %w", err)
+	}
+
+	repo := Repository{
+		postgres: pg,
+		queries:  q,
+	}
+
+	return &repo, nil
 }
-
-const getBankAccountQuery = `
-SELECT id, organization_name, balance_cents, iban, bic
-FROM bank_accounts
-WHERE iban = $1;
-`
-
-const updateBankAccountQuery = `
-UPDATE bank_accounts
-SET
-	balance_cents = :balance_cents, organization_name = :organization_name,
-	iban = :iban, bic = :bic
-WHERE id = :id
-RETURNING id, balance_cents, organization_name, iban, bic;
-`
-
-const insertTransactionsQuery = `
-INSERT INTO transactions (
-	counterparty_name, counterparty_iban, counterparty_bic, amount_cents,
-	amount_currency, bank_account_id, description
-) VALUES (
-	:counterparty_name, :counterparty_iban, :counterparty_bic, :amount_cents,
-	:amount_currency, :bank_account_id, :description
-) RETURNING id, counterparty_name, counterparty_iban, counterparty_bic
-	amount_cents, amount_currency, bank_account_id, description;`
 
 // PerformBulkTransfer executes the provided transfers atomically against a
 // single bank account. validate is called before committing the transaction. If
@@ -65,12 +51,12 @@ func (r *Repository) PerformBulkTransfer(
 
 	defer tx.Rollback() //nolint:errcheck
 
-	bulkTransfer, err = debitAccount(ctx, tx, bulkTransfer)
+	bulkTransfer, err = r.debitAccount(ctx, tx, bulkTransfer)
 	if err != nil {
 		return err
 	}
 
-	bulkTransfer, err = createTransactions(ctx, tx, bulkTransfer)
+	bulkTransfer, err = r.createTransactions(ctx, tx, bulkTransfer)
 	if err != nil {
 		return err
 	}
@@ -89,17 +75,17 @@ func (r *Repository) PerformBulkTransfer(
 // debitAccount fetches the target account from the DB by IBAN and updates its
 // balance. The resulting state of the account is reflected in the returned
 // BulkTransfer.
-func debitAccount(
+func (r *Repository) debitAccount(
 	ctx context.Context, tx *sqlx.Tx, bulkTransfer transferdomain.BulkTransfer,
 ) (transferdomain.BulkTransfer, error) {
-	account, err := getBankAccountWhereIBANTx(ctx, tx, bulkTransfer.Account.OrganizationIBAN)
+	account, err := r.getBankAccountWhereIBANTx(ctx, tx, bulkTransfer.Account.OrganizationIBAN)
 	if err != nil {
 		return bulkTransfer, err
 	}
 
 	account.BalanceCents -= bulkTransfer.TotalCents()
 
-	if account, err = updateBankAccountTx(ctx, tx, account); err != nil {
+	if account, err = r.updateBankAccountTx(ctx, tx, account); err != nil {
 		return bulkTransfer, err
 	}
 
@@ -111,7 +97,7 @@ func debitAccount(
 // createTransactions inserts the BulkTransfer's creditTransfers into the
 // database as transactions using the bulkTransfer.BankAccount.ID as the foreign
 // key. It then returns an updated BulkTransfer to reflect this change.
-func createTransactions(
+func (r *Repository) createTransactions(
 	ctx context.Context, tx *sqlx.Tx, bulkTransfer transferdomain.BulkTransfer,
 ) (transferdomain.BulkTransfer, error) {
 	// Copy the credit transfers from the input bulkTranfer, assigning the
@@ -124,7 +110,7 @@ func createTransactions(
 		creditTransfers[i] = transfer
 	}
 
-	err := insertTransactionsTx(ctx, tx, creditTransfers)
+	err := r.insertTransactionsTx(ctx, tx, creditTransfers)
 	if err != nil {
 		return bulkTransfer, err
 	}
@@ -132,11 +118,11 @@ func createTransactions(
 	return bulkTransfer, nil
 }
 
-func getBankAccountWhereIBANTx(
+func (r *Repository) getBankAccountWhereIBANTx(
 	ctx context.Context, tx *sqlx.Tx, iban string,
 ) (transferdomain.BankAccount, error) {
 	var row bankAccountRow
-	if err := tx.GetContext(ctx, &row, getBankAccountQuery, iban); err != nil {
+	if err := tx.GetContext(ctx, &row, r.queries.getBankAccountByIBAN(), iban); err != nil {
 		return transferdomain.BankAccount{}, fmt.Errorf("get bank account with IBAN %q: %w",
 			iban, err)
 	}
@@ -144,13 +130,15 @@ func getBankAccountWhereIBANTx(
 	return row.toDomain(), nil
 }
 
-func updateBankAccountTx(
+func (r *Repository) updateBankAccountTx(
 	ctx context.Context, tx *sqlx.Tx, account transferdomain.BankAccount,
 ) (transferdomain.BankAccount, error) {
-	stmt, err := tx.PrepareNamedContext(ctx, updateBankAccountQuery)
+	stmt, err := tx.PrepareNamedContext(ctx, r.queries.updateBankAccount())
 	if err != nil {
 		return account, fmt.Errorf("prepare updateBankAccountQuery: %w", err)
 	}
+
+	fmt.Println(stmt.QueryString)
 
 	row := bankAccountRowFromDomain(account)
 
@@ -161,12 +149,12 @@ func updateBankAccountTx(
 	return row.toDomain(), nil
 }
 
-func insertTransactionsTx(
+func (r *Repository) insertTransactionsTx(
 	ctx context.Context, tx *sqlx.Tx, creditTransfers []transferdomain.CreditTransfer,
 ) error {
 	transactionRows := transactionRowsFromDomain(creditTransfers)
 
-	if _, err := tx.NamedExecContext(ctx, insertTransactionsQuery, transactionRows); err != nil {
+	if _, err := tx.NamedExecContext(ctx, r.queries.insertTransactions(), transactionRows); err != nil {
 		return fmt.Errorf("insert transactions: %w", err)
 	}
 
