@@ -19,6 +19,7 @@ type Repository struct {
 // Statically verify that Repository satisfies transferdomain.Repository.
 var _ transferdomain.Repository = (*Repository)(nil)
 
+// New returns a new Repository.
 func New(pg *postgres.Postgres) *Repository {
 	return &Repository{postgres: pg}
 }

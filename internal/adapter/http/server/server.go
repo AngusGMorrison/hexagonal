@@ -15,6 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ErrServerClosed wraps http.ErrServerClosed, preventing external packages from
+// needing to require package http in addition to package server.
 var ErrServerClosed = http.ErrServerClosed
 
 // EnvNotSupportedError represents a failure to match an environment string

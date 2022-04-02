@@ -23,7 +23,7 @@ func New() (EnvConfig, error) {
 	return env, nil
 }
 
-// Env represents the environment variables of the running application.
+// EnvConfig represents the environment variables of the running application.
 type EnvConfig struct {
 	App  App
 	HTTP HTTP

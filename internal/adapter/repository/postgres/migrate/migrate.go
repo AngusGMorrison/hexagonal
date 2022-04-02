@@ -7,7 +7,9 @@ import (
 	"log"
 
 	"github.com/golang-migrate/migrate/v4"
+	// Register the postgres driver.
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	// Register the file source.
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 

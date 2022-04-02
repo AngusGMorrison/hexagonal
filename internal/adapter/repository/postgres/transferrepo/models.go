@@ -45,16 +45,6 @@ func transactionRowsFromDomain(domainTransfers []transferdomain.CreditTransfer) 
 	return rows
 }
 
-func (trs transactionRows) toDomain() []transferdomain.CreditTransfer {
-	creditTransfers := make([]transferdomain.CreditTransfer, len(trs))
-
-	for i, tr := range trs {
-		creditTransfers[i] = tr.toDomain()
-	}
-
-	return creditTransfers
-}
-
 // transactionRow represents a row of the transactions table.
 type transactionRow struct {
 	ID               int64  `db:"id"`
@@ -77,18 +67,5 @@ func transactionRowFromDomain(domainTransfer transferdomain.CreditTransfer) tran
 		AmountCents:      domainTransfer.AmountCents,
 		AmountCurrency:   domainTransfer.Currency,
 		Description:      domainTransfer.Description,
-	}
-}
-
-func (tr transactionRow) toDomain() transferdomain.CreditTransfer {
-	return transferdomain.CreditTransfer{
-		ID:               tr.ID,
-		BankAccountID:    tr.BankAccountID,
-		CounterpartyName: tr.CounterpartyName,
-		CounterpartyBIC:  tr.CounterpartyBIC,
-		CounterpartyIBAN: tr.CounterpartyIBAN,
-		AmountCents:      tr.AmountCents,
-		Currency:         tr.AmountCurrency,
-		Description:      tr.Description,
 	}
 }

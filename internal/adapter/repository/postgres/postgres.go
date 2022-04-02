@@ -19,8 +19,8 @@ type Postgres struct {
 	db     *sqlx.DB
 }
 
-// NewDB returns a configured database that is ready to use, or an error if the
-// connection can't be established.
+// New returns a configured Postgres database that is ready to use, or an error
+// if the connection can't be established.
 func New(cfg envconfig.DB) (*Postgres, error) {
 	db, err := sqlx.Open("postgres", cfg.URL())
 	if err != nil {
@@ -44,6 +44,7 @@ func New(cfg envconfig.DB) (*Postgres, error) {
 	return &pg, nil
 }
 
+// BeginTxx starts and returns a new sqlx transaction.
 func (pg *Postgres) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
 	tx, err := pg.db.BeginTxx(ctx, opts)
 	if err != nil {
@@ -53,6 +54,7 @@ func (pg *Postgres) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx
 	return tx, nil
 }
 
+// Close closes the underlying database connection.
 func (pg *Postgres) Close() error {
 	if err := pg.db.Close(); err != nil {
 		return fmt.Errorf("close inner database: %w", err)
@@ -61,11 +63,11 @@ func (pg *Postgres) Close() error {
 	return nil
 }
 
-func (p *Postgres) ping() error {
-	ctx, cancel := context.WithTimeout(context.Background(), p.config.ConnTimeout)
+func (pg *Postgres) ping() error {
+	ctx, cancel := context.WithTimeout(context.Background(), pg.config.ConnTimeout)
 	defer cancel()
 
-	if err := p.db.PingContext(ctx); err != nil {
+	if err := pg.db.PingContext(ctx); err != nil {
 		return fmt.Errorf("ping database: %w", err)
 	}
 

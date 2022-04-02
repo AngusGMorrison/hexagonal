@@ -16,6 +16,7 @@ type TransferHandler struct {
 	service *transferdomain.Service
 }
 
+// NewTransferHandler configures and returns a new TransferHandler.
 func NewTransferHandler(logger *log.Logger, service *transferdomain.Service) *TransferHandler {
 	return &TransferHandler{
 		logger:  logger,
