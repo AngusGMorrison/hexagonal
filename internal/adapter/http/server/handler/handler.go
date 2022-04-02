@@ -27,7 +27,7 @@ func NewTransferHandler(logger *log.Logger, service *transferdomain.Service) *Tr
 func (th *TransferHandler) BulkTransfer(c *gin.Context) {
 	var btr bulkTransferRequest
 	if err := c.ShouldBind(&btr); err != nil {
-		th.logger.Printf("failed to parse bulk transfer request: %s", err)
+		th.logger.Printf("Failed to parse bulk transfer request: %s", err)
 		c.AbortWithStatus(http.StatusUnprocessableEntity)
 
 		return
@@ -36,7 +36,7 @@ func (th *TransferHandler) BulkTransfer(c *gin.Context) {
 	if err := th.service.PerformBulkTransfer(
 		c, btr.ToDomain(), transferdomain.ValidateBulkTransfer,
 	); err != nil {
-		th.logger.Printf("bulk transfer failed: %s", err)
+		th.logger.Printf("Bulk transfer failed: %s", err)
 		c.AbortWithStatus(http.StatusUnprocessableEntity)
 
 		return

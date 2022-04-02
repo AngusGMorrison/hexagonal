@@ -13,11 +13,11 @@ import (
 // envVarPrefix defines a common prefix for environment variables.
 const envVarPrefix = ""
 
-// New loads all environment variables and returns them as an Env object.
+// New loads all environment variables and returns them as an EnvConfig object.
 func New() (EnvConfig, error) {
 	var env EnvConfig
 	if err := envconfig.Process(envVarPrefix, &env); err != nil {
-		return EnvConfig{}, fmt.Errorf("failed to load environment variables: %w", err)
+		return EnvConfig{}, fmt.Errorf("envconfig.Process: %w", err)
 	}
 
 	return env, nil

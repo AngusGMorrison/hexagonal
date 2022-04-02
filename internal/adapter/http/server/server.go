@@ -63,7 +63,7 @@ func New(cfg Config) (*Server, error) {
 // Run starts the Server in a new goroutine, forwarding any errors to its
 // errorStream.
 func (s *Server) Run() {
-	s.log.Printf("starting server at %s\n", s.server.Addr)
+	s.log.Printf("Starting server at %s\n", s.server.Addr)
 
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -81,13 +81,13 @@ func (s *Server) Errors() <-chan error {
 // GracefulShutdown closes the Server with the grace period specified in its
 // config.
 func (s *Server) GracefulShutdown() error {
-	s.log.Println("shutting down gracefully")
+	s.log.Println("Shutting down gracefully")
 
 	ctx, cancel := context.WithTimeout(context.Background(), s.config.ShutdownGracePeriod)
 	defer cancel()
 
 	if err := s.server.Shutdown(ctx); err != nil {
-		return fmt.Errorf("failed to gracefully shut down the server: %w", err)
+		return fmt.Errorf("shutdown: %w", err)
 	}
 
 	return nil
