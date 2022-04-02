@@ -14,14 +14,20 @@ type Repository interface {
 
 // Service provides the fields and methods required to perform bulk transfer
 type Service struct {
-	Repository
+	repo Repository
 }
 
 func NewService(repo Repository) *Service {
-	return &Service{repo}
+	return &Service{repo: repo}
 }
 
-var ErrInsufficientFunds = errors.New("insufficient funds to settle bulk transfer")
+// PerformBulkTransfer exposes the underlying repo's PerformBulkTransfer method
+// as a convenience.
+func (s *Service) PerformBulkTransfer(
+	ctx context.Context, bt BulkTransfer, validate BulkTransferValidator,
+) error {
+	return s.repo.PerformBulkTransfer(ctx, bt, validate)
+}
 
 // BulkTransfer represents a bulk transfer and its associated business logic.
 type BulkTransfer struct {
@@ -67,6 +73,8 @@ type CreditTransfer struct {
 	CounterpartyIBAN string
 	Description      string
 }
+
+var ErrInsufficientFunds = errors.New("insufficient funds to settle bulk transfer")
 
 // BulkTransferValidator represents a function that returns an error if the
 // BulkTransfer is in an invalid state.

@@ -12,14 +12,14 @@ import (
 
 // TransferHandler specifies endpoints for handling bulk transfer
 type TransferHandler struct {
-	logger          *log.Logger
-	transferService *transferdomain.Service
+	logger  *log.Logger
+	service *transferdomain.Service
 }
 
 func NewTransferHandler(logger *log.Logger, service *transferdomain.Service) *TransferHandler {
 	return &TransferHandler{
-		logger:          logger,
-		transferService: service,
+		logger:  logger,
+		service: service,
 	}
 }
 
@@ -33,8 +33,9 @@ func (th *TransferHandler) BulkTransfer(c *gin.Context) {
 		return
 	}
 
-	if err := th.transferService.PerformBulkTransfer(
-		c, btr.ToDomain(), transferdomain.ValidateBulkTransfer); err != nil {
+	if err := th.service.PerformBulkTransfer(
+		c, btr.ToDomain(), transferdomain.ValidateBulkTransfer,
+	); err != nil {
 		th.logger.Printf("bulk transfer failed: %s", err)
 		c.AbortWithStatus(http.StatusUnprocessableEntity)
 

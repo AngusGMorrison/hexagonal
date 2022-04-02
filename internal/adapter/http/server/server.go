@@ -23,7 +23,7 @@ var (
 // Server wraps a standard library server, providing support for
 // application-specific methods.
 type Server struct {
-	*http.Server
+	server *http.Server
 
 	log         *log.Logger
 	config      envconfig.HTTP
@@ -46,7 +46,7 @@ func New(cfg Config) (*Server, error) {
 	}
 
 	server := Server{
-		Server: &http.Server{
+		server: &http.Server{
 			Addr:         serverAddress(cfg.Env.HTTP.Host, cfg.Env.HTTP.Port),
 			ReadTimeout:  cfg.Env.HTTP.ReadTimeout,
 			WriteTimeout: cfg.Env.HTTP.WriteTimeout,
@@ -63,10 +63,10 @@ func New(cfg Config) (*Server, error) {
 // Run starts the Server in a new goroutine, forwarding any errors to its
 // errorStream.
 func (s *Server) Run() {
-	s.log.Printf("starting server at %s\n", s.Addr)
+	s.log.Printf("starting server at %s\n", s.server.Addr)
 
 	go func() {
-		if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.errorStream <- fmt.Errorf("ListenAndServe: %w", err)
 		}
 	}()
@@ -86,7 +86,7 @@ func (s *Server) GracefulShutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), s.config.ShutdownGracePeriod)
 	defer cancel()
 
-	if err := s.Shutdown(ctx); err != nil {
+	if err := s.server.Shutdown(ctx); err != nil {
 		return fmt.Errorf("failed to gracefully shut down the server: %w", err)
 	}
 

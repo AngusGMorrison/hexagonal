@@ -13,14 +13,14 @@ import (
 // Repository provides access to the database tables of the transfers domain,
 // including bank account and transactions.
 type Repository struct {
-	*postgres.Postgres
+	postgres *postgres.Postgres
 }
 
 // Statically verify that Repository satisfies transferdomain.Repository.
 var _ transferdomain.Repository = (*Repository)(nil)
 
-func New(p *postgres.Postgres) *Repository {
-	return &Repository{Postgres: p}
+func New(pg *postgres.Postgres) *Repository {
+	return &Repository{postgres: pg}
 }
 
 const getBankAccountQuery = `
@@ -53,7 +53,7 @@ INSERT INTO transactions (
 // validation fails, the validation error is returned and the transaction is
 // rolled back.
 func (r *Repository) PerformBulkTransfer(ctx context.Context, bulkTransfer transferdomain.BulkTransfer, validate transferdomain.BulkTransferValidator) error {
-	tx, err := r.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := r.postgres.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return fmt.Errorf("repository.BulkTransfer failed to begin transaction: %w", err)
 	}

@@ -30,18 +30,18 @@ func run(logger *log.Logger) error {
 	}
 
 	// Set up the server's IO dependencies.
-	db, err := postgres.New(env.DB)
+	pg, err := postgres.New(env.DB)
 	if err != nil {
 		return fmt.Errorf("create database: %w", err)
 	}
 
 	defer func() {
-		if err := db.Close(); err != nil {
+		if err := pg.Close(); err != nil {
 			logger.Printf("close database: %v", err)
 		}
 	}()
 
-	transferRepo := transferrepo.New(db)
+	transferRepo := transferrepo.New(pg)
 	transferService := transferdomain.NewService(transferRepo)
 	serverConfig := server.Config{
 		Env:             env,
