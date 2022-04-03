@@ -1,8 +1,8 @@
 # Hexagonal Architecture Demo
 
-A demonstration of the hexagonal architecture pattern in Go, which developed as part of a series of training workshops I created for Qonto, Europe's leading finance solution for freelancers and SMEs.
+A demonstration of the hexagonal architecture pattern in Go, forming part of a series of training workshops I created for Qonto, Europe's leading finance solution for freelancers and SMEs.
 
-This demo provides an HTTP server with one endpoint: `/bulk_transfers`, which receives requests to apply multiple transfers to a single bank account identified by its IBAN. The request must only succeed if the bank account has sufficient funds to settle all the transfers in the bulk transfer. If so, the server persists the balance change and all the transfers to a Postgres database and responds 201 Created. Otherwise, the server commits nothing and responds 422 Unprocessable Entity.
+This demo provides an HTTP server with one endpoint: `/bulk_transfers`, which receives requests to apply multiple transfers to a single bank account identified by its IBAN. The request must only succeed if the bank account has sufficient funds to settle all the transfers in the bulk transfer. If so, the server persists all the transfers and the updated bank balance to a Postgres database and responds 201 Created. Otherwise, the server commits nothing and responds 422 Unprocessable Entity.
 
 ## Running the demo
 
@@ -27,7 +27,7 @@ Requests can then be made to
 POST localhost:3000/bulk_transfer
 ```
 
-Sample payloads and a Postman collection are provided in `/fixtures`.
+Sample payloads and a Postman collection are provided in `/fixtures/requests`.
 
 ## Database
 
@@ -42,9 +42,9 @@ docker-compose exec postgres psql -U postgres hexagonal_development
 
 After building the application, run migrations with `make migrate`.
 
-For the sake of simplicity, seed data is included in the up migration. To restore the database to its original state, roll back to truncate the tables and then migrate up again.
+The database to be migrated is named by the `DB_NAME` environment variable, which defaults to `hexagonal_development`. To migrate the test database, run `DB_NAME=hexagonal_test make migrate`.
 
-Naturally this is not recommended for production applications.
+To seed the database, run `make seed`. The seeds to be loaded are found under `fixtures/seeds`.
 
 ### Schema
 **bank_accounts**

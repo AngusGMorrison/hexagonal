@@ -63,6 +63,11 @@ func (pg *Postgres) Close() error {
 	return nil
 }
 
+// LoadFile loads an entire SQL file into memory and executes it.
+func (pg *Postgres) LoadFile(path string) (*sql.Result, error) {
+	return sqlx.LoadFile(pg.db, path)
+}
+
 func (pg *Postgres) ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), pg.config.ConnTimeout)
 	defer cancel()
