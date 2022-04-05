@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
 	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
 	"github.com/jmoiron/sqlx"
@@ -21,8 +22,8 @@ type Repository struct {
 var _ transferdomain.Repository = (*Repository)(nil)
 
 // New returns a new Repository.
-func New(pg *postgres.Postgres) (*Repository, error) {
-	q, err := loadQueries()
+func New(pg *postgres.Postgres, appConfig envconfig.App) (*Repository, error) {
+	q, err := loadQueries(appConfig.Root)
 	if err != nil {
 		return nil, fmt.Errorf("loadQueries: %w", err)
 	}
@@ -121,7 +122,7 @@ func (r *Repository) createTransactions(
 func (r *Repository) getBankAccountWhereIBANTx(
 	ctx context.Context, tx *sqlx.Tx, iban string,
 ) (transferdomain.BankAccount, error) {
-	var row bankAccountRow
+	var row BankAccountRow
 	if err := tx.GetContext(ctx, &row, r.queries.getBankAccountByIBAN(), iban); err != nil {
 		return transferdomain.BankAccount{}, fmt.Errorf("get bank account with IBAN %q: %w",
 			iban, err)

@@ -1,10 +1,13 @@
-.PHONY: build_migrate migrate build_seed seed build_server run test rollback
+.PHONY: build_migrate migrate rollback build_seed seed build_server run test integration_test
 
 build_migrate:
 	CGO_ENABLED=0 go build -o ./bin/migrate ./cmd/migrate
 
 migrate: build_migrate
 	bin/migrate
+
+rollback: build_migrate
+	bin/migrate -rollback
 
 build_seed:
 	CGO_ENABLED=0 go build -o ./bin/seed ./cmd/seed
@@ -21,5 +24,5 @@ run: build_server migrate
 test:
 	go test -race ./...
 
-rollback:
-	bin/migrate -rollback
+integration_test:
+	go test -race ./internal/integration_test

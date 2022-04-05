@@ -18,7 +18,7 @@ func main() {
 	logger := log.New(os.Stdout, "hexagonal_migrate ", log.LstdFlags)
 
 	if err := run(logger); err != nil {
-		logger.Panic(err)
+		logger.Fatal(err)
 	}
 }
 
@@ -41,7 +41,7 @@ func run(logger *log.Logger) error {
 		}
 	}()
 
-	transferRepo, err := transferrepo.New(pg)
+	transferRepo, err := transferrepo.New(pg, env.App)
 	if err != nil {
 		return fmt.Errorf("create transfer Repository: %w", err)
 	}

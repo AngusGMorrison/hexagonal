@@ -54,6 +54,39 @@ func (pg *Postgres) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx
 	return tx, nil
 }
 
+// BindNamed binds a named query, replacing its named arguments with Postgres
+// positional bindvars and producing a slice of args in the correct binding
+// order.
+func (pg *Postgres) BindNamed(query string, arg any) (string, []any, error) {
+	return pg.db.BindNamed(query, arg)
+}
+
+// Get a single row, scanning the result into dest. Placeholder parameters are
+// replaced with supplied args.
+func (pg *Postgres) Get(dest any, query string, args ...any) error {
+	return pg.db.Get(dest, query, args...)
+}
+
+// Select executes the query and scans each row into dest, which must be slice.
+func (pg *Postgres) Select(dest any, query string, args ...any) error {
+	return pg.db.Select(dest, query, args...)
+}
+
+// Exec executes the query and returns the result.
+func (pg *Postgres) Exec(query string, args ...any) (sql.Result, error) {
+	return pg.db.Exec(query, args...)
+}
+
+// NamedExec executes a query, replaced named arguments with fields from arg.
+func (pg *Postgres) NamedExec(query string, arg any) (sql.Result, error) {
+	return pg.db.NamedExec(query, arg)
+}
+
+// LoadFile loads an entire SQL file into memory and executes it.
+func (pg *Postgres) LoadFile(path string) (*sql.Result, error) {
+	return sqlx.LoadFile(pg.db, path)
+}
+
 // Close closes the underlying database connection.
 func (pg *Postgres) Close() error {
 	if err := pg.db.Close(); err != nil {
@@ -61,11 +94,6 @@ func (pg *Postgres) Close() error {
 	}
 
 	return nil
-}
-
-// LoadFile loads an entire SQL file into memory and executes it.
-func (pg *Postgres) LoadFile(path string) (*sql.Result, error) {
-	return sqlx.LoadFile(pg.db, path)
 }
 
 func (pg *Postgres) ping() error {

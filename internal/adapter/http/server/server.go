@@ -127,6 +127,10 @@ func newGinEngine(env string) (*gin.Engine, error) {
 		gin.SetMode(gin.DebugMode)
 
 		middleware = globalDevelopmentMiddleware()
+	case "test":
+		gin.SetMode(gin.TestMode)
+
+		middleware = globalTestMiddleware()
 	default:
 		return nil, EnvNotSupportedError{env: env}
 	}
@@ -145,5 +149,11 @@ type middlewareStack []gin.HandlerFunc
 // globalDevelopmentMiddleware returns the middleware stack used for all routes
 // when running in development.
 func globalDevelopmentMiddleware() middlewareStack {
+	return middlewareStack{gin.Logger(), gin.Recovery()}
+}
+
+// globalDevelopmentMiddleware returns the middleware stack used for all routes
+// when running in test.
+func globalTestMiddleware() middlewareStack {
 	return middlewareStack{gin.Logger(), gin.Recovery()}
 }

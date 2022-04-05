@@ -2,8 +2,8 @@ package transferrepo
 
 import "github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
 
-// bankAccountRow represents a row of the bank_accounts table.
-type bankAccountRow struct {
+// BankAccountRow represents a row of the bank_accounts table.
+type BankAccountRow struct {
 	ID               int64  `db:"id"`
 	OrganizationName string `db:"organization_name"`
 	BalanceCents     int64  `db:"balance_cents"`
@@ -11,8 +11,8 @@ type bankAccountRow struct {
 	BIC              string `db:"bic"`
 }
 
-func bankAccountRowFromDomain(domainAccount transferdomain.BankAccount) bankAccountRow {
-	return bankAccountRow{
+func bankAccountRowFromDomain(domainAccount transferdomain.BankAccount) BankAccountRow {
+	return BankAccountRow{
 		ID:               domainAccount.ID,
 		OrganizationName: domainAccount.OrganizationName,
 		IBAN:             domainAccount.OrganizationIBAN,
@@ -21,7 +21,7 @@ func bankAccountRowFromDomain(domainAccount transferdomain.BankAccount) bankAcco
 	}
 }
 
-func (ba bankAccountRow) toDomain() transferdomain.BankAccount {
+func (ba BankAccountRow) toDomain() transferdomain.BankAccount {
 	return transferdomain.BankAccount{
 		ID:               ba.ID,
 		OrganizationName: ba.OrganizationName,
@@ -31,12 +31,12 @@ func (ba bankAccountRow) toDomain() transferdomain.BankAccount {
 	}
 }
 
-// transactionRows is a convenience wrapper around one or more instances of
+// TransactionRows is a convenience wrapper around one or more instances of
 // transactionRow.
-type transactionRows []transactionRow
+type TransactionRows []TransactionRow
 
-func transactionRowsFromDomain(domainTransfers []transferdomain.CreditTransfer) transactionRows {
-	rows := make(transactionRows, len(domainTransfers))
+func transactionRowsFromDomain(domainTransfers []transferdomain.CreditTransfer) TransactionRows {
+	rows := make(TransactionRows, len(domainTransfers))
 
 	for i, dt := range domainTransfers {
 		rows[i] = transactionRowFromDomain(dt)
@@ -45,8 +45,8 @@ func transactionRowsFromDomain(domainTransfers []transferdomain.CreditTransfer) 
 	return rows
 }
 
-// transactionRow represents a row of the transactions table.
-type transactionRow struct {
+// TransactionRow represents a row of the transactions table.
+type TransactionRow struct {
 	ID               int64  `db:"id"`
 	BankAccountID    int64  `db:"bank_account_id"`
 	CounterpartyName string `db:"counterparty_name"`
@@ -57,8 +57,8 @@ type transactionRow struct {
 	Description      string `db:"description"`
 }
 
-func transactionRowFromDomain(domainTransfer transferdomain.CreditTransfer) transactionRow {
-	return transactionRow{
+func transactionRowFromDomain(domainTransfer transferdomain.CreditTransfer) TransactionRow {
+	return TransactionRow{
 		ID:               domainTransfer.ID,
 		BankAccountID:    domainTransfer.BankAccountID,
 		CounterpartyName: domainTransfer.CounterpartyName,
