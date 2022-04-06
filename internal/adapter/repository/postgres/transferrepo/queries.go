@@ -48,8 +48,7 @@ func (q queries) insertTransactions() string {
 }
 
 func absQueryDir(appRoot string) string {
-	return filepath.Join(
-		appRoot, "internal", "adapter", "repository", "postgres", "transferrepo", "sql")
+	return filepath.Join(appRoot, "queries", "transfer")
 }
 
 func queryFilenames() []string {
