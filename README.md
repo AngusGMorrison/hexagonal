@@ -2,7 +2,7 @@
 
 A demonstration of the hexagonal architecture pattern in Go, forming part of a series of training workshops I created for Qonto, Europe's leading finance solution for freelancers and SMEs.
 
-This demo provides an HTTP server with one endpoint: `/bulk_transfers`, which receives requests to apply multiple transfers to a single bank account identified by its IBAN. The request must only succeed if the bank account has sufficient funds to settle all the transfers in the bulk transfer. If so, the server persists all the transfers and the updated bank balance to a Postgres database and responds 201 Created. Otherwise, the server commits nothing and responds 422 Unprocessable Entity.
+This demo provides an HTTP server with one endpoint: `/bulk_transfer`, which receives requests to apply multiple transfers to a single bank account identified by its IBAN. The request must only succeed if the bank account has sufficient funds to settle all the transfers in the bulk transfer. If so, the server persists all the transfers and the updated bank balance to a Postgres database and responds 201 Created. Otherwise, the server commits nothing and responds 422 Unprocessable Entity.
 
 ## Running the demo
 

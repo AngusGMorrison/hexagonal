@@ -139,8 +139,6 @@ func (r *Repository) updateBankAccountTx(
 		return account, fmt.Errorf("prepare updateBankAccountQuery: %w", err)
 	}
 
-	fmt.Println(stmt.QueryString)
-
 	row := bankAccountRowFromDomain(account)
 
 	if err := stmt.QueryRowxContext(ctx, row).StructScan(&row); err != nil {

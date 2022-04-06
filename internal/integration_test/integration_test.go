@@ -5,6 +5,7 @@ package integration_test
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -83,6 +84,12 @@ const (
 		VALUES (:organization_name, :iban, :bic, :balance_cents)
 		RETURNING *;`
 
+	_getBankAccountByIDQuery = `
+		SELECT id, organization_name, iban, bic, balance_cents
+		FROM bank_accounts
+		WHERE id = $1;
+	`
+
 	_countBankAccountsQuery = `SELECT COUNT(*) FROM bank_accounts;`
 
 	_truncateBankAccountsQuery = `TRUNCATE TABLE bank_accounts CASCADE;`
@@ -117,6 +124,17 @@ func (r *repository) insertBankAccount(
 	return br, nil
 }
 
+func (r *repository) getBankAccountByID(id int64) (transferrepo.BankAccountRow, error) {
+	var row transferrepo.BankAccountRow
+
+	err := r.db.Get(&row, _getBankAccountByIDQuery, id)
+	if err != nil {
+		return row, fmt.Errorf("getBankAccount")
+	}
+
+	return row, nil
+}
+
 func (r *repository) countBankAccounts() (int64, error) {
 	var count int64
 
@@ -145,12 +163,12 @@ func (r *repository) countTransactions() (int64, error) {
 	return count, nil
 }
 
-func (r *repository) selectTransactionByCounterpartyName(
+func (r *repository) selectTransactionsByCounterpartyName(
 	name string,
 ) (transferrepo.TransactionRows, error) {
 	var rows transferrepo.TransactionRows
 
-	if err := r.db.Select(rows, _selectTransactionByCounterpartyNameQuery, name); err != nil {
+	if err := r.db.Select(&rows, _selectTransactionByCounterpartyNameQuery, name); err != nil {
 		return nil, fmt.Errorf("selectTransactionByCounterpartyName: %w", err)
 	}
 
@@ -166,7 +184,8 @@ func (r *repository) truncateTransactions() error {
 }
 
 type infrastructure struct {
-	repo *repository
+	repo   *repository
+	client *http.Client
 }
 
 func newInfrastructure(env envconfig.EnvConfig) (*infrastructure, error) {
@@ -175,9 +194,16 @@ func newInfrastructure(env envconfig.EnvConfig) (*infrastructure, error) {
 		return nil, fmt.Errorf("create database: %w", err)
 	}
 
-	repo := repository{db: db}
+	infra := infrastructure{
+		repo: &repository{
+			db: db,
+		},
+		client: &http.Client{
+			Timeout: env.HTTP.ClientTimeout,
+		},
+	}
 
-	return &infrastructure{repo: &repo}, nil
+	return &infra, nil
 }
 
 // mustCleanup is designed to be passed to (*testing.T).Cleanup to shut down the
@@ -198,6 +224,7 @@ func defaultEnvConfig() envconfig.EnvConfig {
 		HTTP: envconfig.HTTP{
 			Host:                "",
 			Port:                _serverPort,
+			ClientTimeout:       5 * time.Second,
 			ReadTimeout:         5 * time.Second,
 			WriteTimeout:        5 * time.Second,
 			ShutdownGracePeriod: 0,
@@ -220,6 +247,14 @@ func defaultEnvConfig() envconfig.EnvConfig {
 
 func defaultAppRoot() string {
 	return filepath.Join(string(filepath.Separator), "usr", "src", "app")
+}
+
+func bulkTransferURL() string {
+	return serverURL() + "/bulk_transfer"
+}
+
+func serverURL() string {
+	return fmt.Sprintf("http://0.0.0.0:%d", _serverPort)
 }
 
 func defaultBankAccount() transferrepo.BankAccountRow {

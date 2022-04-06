@@ -42,6 +42,7 @@ type App struct {
 type HTTP struct {
 	Host                string        `envconfig:"SERVER_HOST" default:""`
 	Port                int           `envconfig:"SERVER_PORT" default:"3000"`
+	ClientTimeout       time.Duration `envconfig:"CLIENT_TIMEOUT" default:"5s"`
 	ReadTimeout         time.Duration `envconfig:"SERVER_READ_TIMEOUT" default:"5s"`
 	WriteTimeout        time.Duration `envconfig:"SERVER_WRITE_TIMEOUT" default:"5s"`
 	ShutdownGracePeriod time.Duration `envconfig:"SERVER_SHUTDOWN_GRACE_PERIOD" default:"0s"`

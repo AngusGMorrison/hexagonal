@@ -2,7 +2,11 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -34,6 +38,8 @@ func (th *TransferHandler) BulkTransfer(c *gin.Context) {
 		return
 	}
 
+	fmt.Println("parsed fine")
+
 	if err := th.service.PerformBulkTransfer(
 		c, btr.ToDomain(), transferdomain.ValidateBulkTransfer,
 	); err != nil {
@@ -44,6 +50,24 @@ func (th *TransferHandler) BulkTransfer(c *gin.Context) {
 	}
 
 	c.Status(http.StatusCreated)
+}
+
+func copyRequestBody(c *gin.Context) ([]byte, error) {
+	// Create a buffer to store the contents of the body.
+	bodyCopy := new(bytes.Buffer)
+	tee := io.TeeReader(c.Request.Body, bodyCopy)
+
+	// Reading from the TeeReader simultaneously copies its bytes into bodyCopy.
+	bodyBytes, err := ioutil.ReadAll(tee)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read request body: %w", err)
+	}
+
+	// Replace the original request body, which has been consumed.
+	c.Request.Body = ioutil.NopCloser(bodyCopy)
+
+	// Return a copy of the the body.
+	return bodyBytes, nil
 }
 
 // bulkTransferRequest represents an incoming bulk transfer payload.
