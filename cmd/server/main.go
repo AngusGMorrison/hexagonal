@@ -7,7 +7,6 @@ import (
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
-	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres/transferrepo"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/rest"
 	"github.com/angusgmorrison/hexagonal/internal/controller"
 )
@@ -28,18 +27,18 @@ func run(logger *log.Logger) error {
 	}
 
 	// Set up the server's IO dependencies.
-	pg, err := postgres.New(envConfig.DB)
+	db, err := postgres.NewDB(envConfig.DB)
 	if err != nil {
 		return fmt.Errorf("create database: %w", err)
 	}
 
 	defer func() {
-		if err := pg.Close(); err != nil {
+		if err := db.Close(); err != nil {
 			logger.Printf("Failed to close database: %v", err)
 		}
 	}()
 
-	transferRepo, err := transferrepo.New(pg, envConfig.App)
+	transferRepo, err := postgres.NewTransferRepository(db, envConfig.App)
 	if err != nil {
 		return fmt.Errorf("create transfer Repository: %w", err)
 	}
