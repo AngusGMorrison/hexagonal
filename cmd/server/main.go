@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/adapter/http/server"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres/transferrepo"
+	"github.com/angusgmorrison/hexagonal/internal/adapter/rest"
 	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
 )
 
@@ -24,69 +22,32 @@ func main() {
 
 func run(logger *log.Logger) error {
 	// Load environment variables.
-	env, err := envconfig.New()
+	envConfig, err := envconfig.New()
 	if err != nil {
 		return fmt.Errorf("create envconfig: %w", err)
 	}
 
 	// Set up the server's IO dependencies.
-	pg, err := postgres.New(env.DB)
+	pg, err := postgres.New(envConfig.DB)
 	if err != nil {
 		return fmt.Errorf("create database: %w", err)
 	}
 
 	defer func() {
 		if err := pg.Close(); err != nil {
-			logger.Printf("close database: %v", err)
+			logger.Printf("Failed to close database: %v", err)
 		}
 	}()
 
-	transferRepo, err := transferrepo.New(pg, env.App)
+	transferRepo, err := transferrepo.New(pg, envConfig.App)
 	if err != nil {
 		return fmt.Errorf("create transfer Repository: %w", err)
 	}
 
 	transferService := transferdomain.NewService(transferRepo)
 
-	serverConfig := server.Config{
-		Env:             env,
-		Logger:          logger,
-		TransferService: transferService,
-	}
+	// Inject the dependencies into the server.
+	server := rest.NewServer(logger, envConfig, transferService)
 
-	// Create the server, injecting dependencies.
-	svr, err := server.New(serverConfig)
-	if err != nil {
-		return fmt.Errorf("create server: %w", err)
-	}
-
-	svr.Run()
-
-	// Monitor the running program for server errors and interrupts.
-	if err = supervise(svr, logger); err != nil {
-		return fmt.Errorf("supervisor: %w", err)
-	}
-
-	return nil
-}
-
-// supervise monitors the running program, shutting down if the server fails or
-// the process is interrupted by the user.
-func supervise(server *server.Server, logger *log.Logger) error {
-	interrupts := make(chan os.Signal, 1)
-	signal.Notify(interrupts, os.Interrupt, syscall.SIGTERM)
-
-	select {
-	case err := <-server.Errors():
-		return fmt.Errorf("server error: %w", err)
-	case sig := <-interrupts:
-		logger.Printf("Received signal %q. Shutting down gracefully...\n", sig)
-
-		err := server.GracefulShutdown()
-		if err != nil {
-			return fmt.Errorf("graceful shutdown: %w", err)
-		}
-	}
-
-	return nil
+	return server.Run()
 }

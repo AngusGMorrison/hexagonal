@@ -82,4 +82,4 @@ To seed the database, run `make seed`. The seeds to be loaded are found under `f
 ## Tests
 A full integration test suite can be found under `internal/integration_test`. Run integration tests with `make integration_test`.
 
-Example unit tests can be found for the `handler` package in `internal/infra/http/server/handler/handler_test.go`. Run these using `make unit_test`.
+Example unit tests can be found for the `handler` package in `internal/infra/rest/handler/handler_test.go`. Run these using `make unit_test`.

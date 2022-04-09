@@ -1,6 +1,6 @@
-//go:build !integration
+//go:build unit
 
-package handler
+package rest
 
 import (
 	"bytes"
@@ -12,26 +12,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
 	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain/mock"
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewTransferHandler(t *testing.T) {
-	t.Parallel()
-	assert := assert.New(t)
-
-	logger := log.New(os.Stdout, "hexagonal_test ", log.LstdFlags)
-	service := transferdomain.NewService(&mock.Repository{})
-	handler := NewTransferHandler(logger, service)
-
-	assert.Equal(logger, handler.logger, "logger")
-	assert.Equal(service, handler.service, "service")
-}
-
-func TestBulkTransfer(t *testing.T) {
+func TestHandleBulkTransfer(t *testing.T) {
 	t.Parallel()
 	require := require.New(t)
 
@@ -41,8 +28,7 @@ func TestBulkTransfer(t *testing.T) {
 		var (
 			repo    = mock.Repository{}
 			service = transferdomain.NewService(&repo)
-			handler = NewTransferHandler(logger, service)
-			router  = newRouter(handler)
+			server  = NewServer(logger, defaultConfig(), service)
 		)
 
 		fixturePath := filepath.Join(fixtureDir(), "401_bad_request.json")
@@ -53,7 +39,7 @@ func TestBulkTransfer(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, "/bulk_transfer", bytes.NewReader(fixtureBytes))
 		r.Header.Set("content-type", "application/json")
 
-		router.ServeHTTP(w, r)
+		server.ServeHTTP(w, r)
 
 		body, err := ioutil.ReadAll(w.Body)
 		require.NoError(err)
@@ -66,8 +52,7 @@ func TestBulkTransfer(t *testing.T) {
 		var (
 			repo    = mock.Repository{}
 			service = transferdomain.NewService(&repo)
-			handler = NewTransferHandler(logger, service)
-			router  = newRouter(handler)
+			server  = NewServer(logger, defaultConfig(), service)
 		)
 
 		fixturePath := filepath.Join(fixtureDir(), "201_created.json")
@@ -78,7 +63,7 @@ func TestBulkTransfer(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, "/bulk_transfer", bytes.NewReader(fixtureBytes))
 		r.Header.Set("content-type", "application/json")
 
-		router.ServeHTTP(w, r)
+		server.ServeHTTP(w, r)
 
 		body, err := ioutil.ReadAll(w.Body)
 		require.NoError(err)
@@ -91,8 +76,7 @@ func TestBulkTransfer(t *testing.T) {
 		var (
 			repo    = mock.Repository{Err: transferdomain.ErrInsufficientFunds}
 			service = transferdomain.NewService(&repo)
-			handler = NewTransferHandler(logger, service)
-			router  = newRouter(handler)
+			server  = NewServer(logger, defaultConfig(), service)
 		)
 
 		fixturePath := filepath.Join(fixtureDir(), "422_insufficient_funds.json")
@@ -103,7 +87,7 @@ func TestBulkTransfer(t *testing.T) {
 		r := httptest.NewRequest(http.MethodPost, "/bulk_transfer", bytes.NewReader(fixtureBytes))
 		r.Header.Set("content-type", "application/json")
 
-		router.ServeHTTP(w, r)
+		server.ServeHTTP(w, r)
 
 		body, err := ioutil.ReadAll(w.Body)
 		require.NoError(err)
@@ -114,12 +98,15 @@ func TestBulkTransfer(t *testing.T) {
 }
 
 func fixtureDir() string {
-	return filepath.Join("..", "..", "..", "..", "..", "fixtures", "requests")
+	return filepath.Join("..", "..", "..", "fixtures", "requests")
 }
 
-func newRouter(h *TransferHandler) *gin.Engine {
-	r := gin.Default()
-	r.POST("/bulk_transfer", h.BulkTransfer)
-
-	return r
+func defaultConfig() envconfig.EnvConfig {
+	return envconfig.EnvConfig{
+		App: envconfig.App{
+			Name: "hexagonal",
+			Env:  "test",
+			Root: filepath.Join(string(filepath.Separator), "usr", "src", "app"),
+		},
+	}
 }

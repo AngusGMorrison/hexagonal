@@ -14,9 +14,10 @@ import (
 	"time"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/adapter/http/server"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres/transferrepo"
+	"github.com/angusgmorrison/hexagonal/internal/adapter/rest"
+	server "github.com/angusgmorrison/hexagonal/internal/adapter/rest"
 	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
 )
 
@@ -27,13 +28,19 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	srv, err := NewServer()
+	server, err := NewServer()
 	if err != nil {
 		panic(err)
 	}
 
+	go func() {
+		if err := server.Run(); err != nil {
+			panic(err)
+		}
+	}()
+
 	defer func() {
-		if err := srv.GracefulShutdown(); err != nil {
+		if err := server.GracefulShutdown(); err != nil {
 			panic(err)
 		}
 	}()
@@ -44,40 +51,22 @@ func TestMain(m *testing.M) {
 func NewServer() (*server.Server, error) {
 	logger := log.New(os.Stdout, "hexagonal_test ", log.LstdFlags)
 
-	env := defaultEnvConfig()
+	envConfig := defaultEnvConfig()
 
-	db, err := postgres.New(env.DB)
+	db, err := postgres.New(envConfig.DB)
 	if err != nil {
 		return nil, fmt.Errorf("create database: %w", err)
 	}
 
-	transferRepo, err := transferrepo.New(db, env.App)
+	transferRepo, err := transferrepo.New(db, envConfig.App)
 	if err != nil {
 		return nil, fmt.Errorf("create transfer Repository: %w", err)
 	}
 
 	transferService := transferdomain.NewService(transferRepo)
+	server := rest.NewServer(logger, envConfig, transferService)
 
-	serverConfig := server.Config{
-		Env:             env,
-		Logger:          logger,
-		TransferService: transferService,
-	}
-
-	svr, err := server.New(serverConfig)
-	if err != nil {
-		return nil, fmt.Errorf("create server: %w", err)
-	}
-
-	svr.Run()
-
-	select {
-	case err = <-svr.Errors():
-		return nil, fmt.Errorf("start server: %w", err)
-	default:
-	}
-
-	return svr, nil
+	return server, nil
 }
 
 const (
