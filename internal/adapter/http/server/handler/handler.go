@@ -33,7 +33,7 @@ func (th *TransferHandler) BulkTransfer(c *gin.Context) {
 	var btr bulkTransferRequest
 	if err := c.ShouldBind(&btr); err != nil {
 		th.logger.Printf("Failed to parse bulk transfer request: %s", err)
-		c.AbortWithStatus(http.StatusUnprocessableEntity)
+		c.AbortWithStatus(http.StatusBadRequest)
 
 		return
 	}

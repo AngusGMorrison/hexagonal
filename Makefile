@@ -1,4 +1,4 @@
-.PHONY: build_migrate migrate rollback build_seed seed build_server run test integration_test
+.PHONY: build_migrate migrate rollback build_seed seed build_server run migrate_test unit_test integration_test
 
 build_migrate:
 	CGO_ENABLED=0 go build -o ./bin/migrate ./cmd/migrate
@@ -21,8 +21,11 @@ build_server:
 run: build_server migrate 
 	bin/server
 
-test:
+migrate_test: build_migrate
+	DB_NAME=hexagonal_test bin/migrate
+
+unit_test:
 	go test -race ./...
 
 integration_test:
-	go test -race ./internal/integration_test
+	go test -race -tags=integration ./...

@@ -1,3 +1,5 @@
+//go:build integration
+
 package integration_test
 
 import (
@@ -93,7 +95,7 @@ func TestBulkTransfer(t *testing.T) {
 		}()
 
 		fixturePath, err := filepath.Abs(
-			filepath.Join("..", "..", "fixtures", "requests", "201_success.json"))
+			filepath.Join("..", "..", "fixtures", "requests", "201_created.json"))
 		require.NoError(err, "create path to fixture")
 
 		fixtureBytes, err := ioutil.ReadFile(fixturePath)

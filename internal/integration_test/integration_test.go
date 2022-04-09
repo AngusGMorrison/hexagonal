@@ -1,3 +1,5 @@
+//go:build integration
+
 // Package integration_test contains integration tests for the hexagonal
 // application.
 package integration_test

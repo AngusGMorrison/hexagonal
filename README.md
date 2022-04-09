@@ -2,7 +2,13 @@
 
 A demonstration of the hexagonal architecture pattern in Go, forming part of a series of training workshops I created for Qonto, Europe's leading finance solution for freelancers and SMEs.
 
-This demo provides an HTTP server with one endpoint: `/bulk_transfer`, which receives requests to apply multiple transfers to a single bank account identified by its IBAN. The request must only succeed if the bank account has sufficient funds to settle all the transfers in the bulk transfer. If so, the server persists all the transfers and the updated bank balance to a Postgres database and responds 201 Created. Otherwise, the server commits nothing and responds 422 Unprocessable Entity.
+This demo provides an HTTP server with one endpoint: `/bulk_transfer`, which receives requests to apply multiple transfers to a single bank account identified by its IBAN. The request must only succeed if the bank account has sufficient funds to settle all the transfers in the bulk transfer.
+
+If the request is malformed, the server responds 401 Bad Request.
+
+If the bank account named by the request has sufficient funds to settle all transactions, the server persists all the transfers and updates the bank account's balance and responds 201 Created.
+
+If the bank account has insufficient funds to settle all transactions, nothing is committed and the server responds 422 Unprocessable Entity.
 
 ## Running the demo
 
@@ -18,6 +24,15 @@ CREATE DATABASE hexagonal_development;
 CREATE DATABASE hexagonal_test;
 ```
 
+Run the migrations and seed the development database:
+```bash
+docker-compose run --rm hexagonal bash
+make migrate
+make migate_test
+make seed
+```
+
+Run the server:
 ```bash
 docker-compose up hexagonal
 ```
@@ -27,7 +42,7 @@ Requests can then be made to
 POST localhost:3000/bulk_transfer
 ```
 
-Sample payloads and a Postman collection are provided in `/fixtures/requests`.
+Sample payloads and a Postman collection are provided in `fixtures/requests`.
 
 ## Database
 
@@ -40,9 +55,9 @@ docker-compose exec postgres psql -U postgres hexagonal_development
 
 ### Migrations
 
-After building the application, run migrations with `make migrate`.
+After building the application, run migrations with `make migrate`. Use `make migrate_test` to migrate the test database.
 
-The database to be migrated is named by the `DB_NAME` environment variable, which defaults to `hexagonal_development`. To migrate the test database, run `DB_NAME=hexagonal_test make migrate`.
+Alternatively, the database to be migrated is given by the `DB_NAME` environment variable, which defaults to `hexagonal_development`. To migrate the test database, run `DB_NAME=hexagonal_test make migrate`.
 
 To seed the database, run `make seed`. The seeds to be loaded are found under `fixtures/seeds`.
 
@@ -63,3 +78,8 @@ To seed the database, run `make seed`. The seeds to be loaded are found under `f
 * amount_currency TEXT
 * bank_account_id INTEGER FOREIGN KEY
 * description TEXT
+
+## Tests
+A full integration test suite can be found under `internal/integration_test`. Run integration tests with `make integration_test`.
+
+Example unit tests can be found for the `handler` package in `internal/infra/http/server/handler/handler_test.go`. Run these using `make unit_test`.
