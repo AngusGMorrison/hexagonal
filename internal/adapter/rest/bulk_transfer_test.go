@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
-	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain/mock"
+	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/controller/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ func TestHandleBulkTransfer(t *testing.T) {
 	t.Run("malformed request", func(t *testing.T) {
 		var (
 			repo    = mock.Repository{}
-			service = transferdomain.NewService(&repo)
+			service = controller.NewTransferController(&repo)
 			server  = NewServer(logger, defaultConfig(), service)
 		)
 
@@ -51,7 +51,7 @@ func TestHandleBulkTransfer(t *testing.T) {
 	t.Run("transfer created", func(t *testing.T) {
 		var (
 			repo    = mock.Repository{}
-			service = transferdomain.NewService(&repo)
+			service = controller.NewTransferController(&repo)
 			server  = NewServer(logger, defaultConfig(), service)
 		)
 
@@ -74,8 +74,8 @@ func TestHandleBulkTransfer(t *testing.T) {
 
 	t.Run("transfer creation error", func(t *testing.T) {
 		var (
-			repo    = mock.Repository{Err: transferdomain.ErrInsufficientFunds}
-			service = transferdomain.NewService(&repo)
+			repo    = mock.Repository{Err: controller.ErrInsufficientFunds}
+			service = controller.NewTransferController(&repo)
 			server  = NewServer(logger, defaultConfig(), service)
 		)
 

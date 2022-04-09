@@ -7,7 +7,7 @@ import (
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
-	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
+	"github.com/angusgmorrison/hexagonal/internal/controller"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -18,8 +18,8 @@ type Repository struct {
 	queries  queries
 }
 
-// Statically verify that Repository satisfies transferdomain.Repository.
-var _ transferdomain.Repository = (*Repository)(nil)
+// Statically verify that Repository satisfies controller.Repository.
+var _ controller.TransferRepository = (*Repository)(nil)
 
 // New returns a new Repository.
 func New(pg *postgres.Postgres, appConfig envconfig.App) (*Repository, error) {
@@ -42,8 +42,8 @@ func New(pg *postgres.Postgres, appConfig envconfig.App) (*Repository, error) {
 // rolled back.
 func (r *Repository) PerformBulkTransfer(
 	ctx context.Context,
-	bulkTransfer transferdomain.BulkTransfer,
-	validate transferdomain.BulkTransferValidator,
+	bulkTransfer controller.BulkTransfer,
+	validate controller.BulkTransferValidator,
 ) error {
 	tx, err := r.postgres.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
@@ -77,8 +77,8 @@ func (r *Repository) PerformBulkTransfer(
 // balance. The resulting state of the account is reflected in the returned
 // BulkTransfer.
 func (r *Repository) debitAccount(
-	ctx context.Context, tx *sqlx.Tx, bulkTransfer transferdomain.BulkTransfer,
-) (transferdomain.BulkTransfer, error) {
+	ctx context.Context, tx *sqlx.Tx, bulkTransfer controller.BulkTransfer,
+) (controller.BulkTransfer, error) {
 	account, err := r.getBankAccountWhereIBANTx(ctx, tx, bulkTransfer.Account.OrganizationIBAN)
 	if err != nil {
 		return bulkTransfer, err
@@ -99,12 +99,12 @@ func (r *Repository) debitAccount(
 // database as transactions using the bulkTransfer.BankAccount.ID as the foreign
 // key. It then returns an updated BulkTransfer to reflect this change.
 func (r *Repository) createTransactions(
-	ctx context.Context, tx *sqlx.Tx, bulkTransfer transferdomain.BulkTransfer,
-) (transferdomain.BulkTransfer, error) {
+	ctx context.Context, tx *sqlx.Tx, bulkTransfer controller.BulkTransfer,
+) (controller.BulkTransfer, error) {
 	// Copy the credit transfers from the input bulkTranfer, assigning the
 	// account ID to each. Copying preserves the original state of the input
 	// bulkTransfer in the event of an error.
-	creditTransfers := make([]transferdomain.CreditTransfer, len(bulkTransfer.CreditTransfers))
+	creditTransfers := make([]controller.CreditTransfer, len(bulkTransfer.CreditTransfers))
 
 	for i, transfer := range bulkTransfer.CreditTransfers {
 		transfer.BankAccountID = bulkTransfer.Account.ID
@@ -121,10 +121,10 @@ func (r *Repository) createTransactions(
 
 func (r *Repository) getBankAccountWhereIBANTx(
 	ctx context.Context, tx *sqlx.Tx, iban string,
-) (transferdomain.BankAccount, error) {
+) (controller.BankAccount, error) {
 	var row BankAccountRow
 	if err := tx.GetContext(ctx, &row, r.queries.getBankAccountByIBAN(), iban); err != nil {
-		return transferdomain.BankAccount{}, fmt.Errorf("get bank account with IBAN %q: %w",
+		return controller.BankAccount{}, fmt.Errorf("get bank account with IBAN %q: %w",
 			iban, err)
 	}
 
@@ -132,8 +132,8 @@ func (r *Repository) getBankAccountWhereIBANTx(
 }
 
 func (r *Repository) updateBankAccountTx(
-	ctx context.Context, tx *sqlx.Tx, account transferdomain.BankAccount,
-) (transferdomain.BankAccount, error) {
+	ctx context.Context, tx *sqlx.Tx, account controller.BankAccount,
+) (controller.BankAccount, error) {
 	stmt, err := tx.PrepareNamedContext(ctx, r.queries.updateBankAccount())
 	if err != nil {
 		return account, fmt.Errorf("prepare updateBankAccountQuery: %w", err)
@@ -149,7 +149,7 @@ func (r *Repository) updateBankAccountTx(
 }
 
 func (r *Repository) insertTransactionsTx(
-	ctx context.Context, tx *sqlx.Tx, creditTransfers []transferdomain.CreditTransfer,
+	ctx context.Context, tx *sqlx.Tx, creditTransfers []controller.CreditTransfer,
 ) error {
 	transactionRows := transactionRowsFromDomain(creditTransfers)
 

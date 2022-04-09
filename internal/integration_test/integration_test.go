@@ -18,7 +18,7 @@ import (
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres/transferrepo"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/rest"
 	server "github.com/angusgmorrison/hexagonal/internal/adapter/rest"
-	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
+	"github.com/angusgmorrison/hexagonal/internal/controller"
 )
 
 const (
@@ -63,7 +63,7 @@ func NewServer() (*server.Server, error) {
 		return nil, fmt.Errorf("create transfer Repository: %w", err)
 	}
 
-	transferService := transferdomain.NewService(transferRepo)
+	transferService := controller.NewTransferController(transferRepo)
 	server := rest.NewServer(logger, envConfig, transferService)
 
 	return server, nil

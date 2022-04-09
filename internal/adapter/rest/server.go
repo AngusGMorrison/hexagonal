@@ -11,7 +11,7 @@ import (
 	"syscall"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
+	"github.com/angusgmorrison/hexagonal/internal/controller"
 	"github.com/gin-gonic/gin"
 )
 
@@ -31,14 +31,14 @@ type Server struct {
 
 	// services are the structures by which handlers communicate requests to
 	// business logic.
-	transferService *transferdomain.Service
+	transferController *controller.TransferController
 }
 
 // NewServer returns a new hexagonal server configured using the provided Config.
 func NewServer(
 	logger *log.Logger,
 	envConfig envconfig.EnvConfig,
-	transferService *transferdomain.Service,
+	transferController *controller.TransferController,
 ) *Server {
 	gin.SetMode(envConfig.App.GinMode)
 
@@ -50,8 +50,8 @@ func NewServer(
 			ReadTimeout:  envConfig.HTTP.ReadTimeout,
 			WriteTimeout: envConfig.HTTP.WriteTimeout,
 		},
-		errorStream:     make(chan error, 1),
-		transferService: transferService,
+		errorStream:        make(chan error, 1),
+		transferController: transferController,
 	}
 
 	server.setupRoutes()

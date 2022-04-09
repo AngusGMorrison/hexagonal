@@ -1,6 +1,6 @@
 package transferrepo
 
-import "github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
+import "github.com/angusgmorrison/hexagonal/internal/controller"
 
 // BankAccountRow represents a row of the bank_accounts table.
 type BankAccountRow struct {
@@ -11,7 +11,7 @@ type BankAccountRow struct {
 	BIC              string `db:"bic"`
 }
 
-func bankAccountRowFromDomain(domainAccount transferdomain.BankAccount) BankAccountRow {
+func bankAccountRowFromDomain(domainAccount controller.BankAccount) BankAccountRow {
 	return BankAccountRow{
 		ID:               domainAccount.ID,
 		OrganizationName: domainAccount.OrganizationName,
@@ -21,8 +21,8 @@ func bankAccountRowFromDomain(domainAccount transferdomain.BankAccount) BankAcco
 	}
 }
 
-func (ba BankAccountRow) toDomain() transferdomain.BankAccount {
-	return transferdomain.BankAccount{
+func (ba BankAccountRow) toDomain() controller.BankAccount {
+	return controller.BankAccount{
 		ID:               ba.ID,
 		OrganizationName: ba.OrganizationName,
 		OrganizationIBAN: ba.IBAN,
@@ -35,7 +35,7 @@ func (ba BankAccountRow) toDomain() transferdomain.BankAccount {
 // transactionRow.
 type TransactionRows []TransactionRow
 
-func transactionRowsFromDomain(domainTransfers []transferdomain.CreditTransfer) TransactionRows {
+func transactionRowsFromDomain(domainTransfers []controller.CreditTransfer) TransactionRows {
 	rows := make(TransactionRows, len(domainTransfers))
 
 	for i, dt := range domainTransfers {
@@ -57,7 +57,7 @@ type TransactionRow struct {
 	Description      string `db:"description"`
 }
 
-func transactionRowFromDomain(domainTransfer transferdomain.CreditTransfer) TransactionRow {
+func transactionRowFromDomain(domainTransfer controller.CreditTransfer) TransactionRow {
 	return TransactionRow{
 		ID:               domainTransfer.ID,
 		BankAccountID:    domainTransfer.BankAccountID,

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/angusgmorrison/hexagonal/internal/app/transferdomain"
+	"github.com/angusgmorrison/hexagonal/internal/controller"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,9 +16,9 @@ type bulkTransferRequest struct {
 	CreditTransfers  creditTransfers `json:"credit_transfers" binding:"required"`
 }
 
-func (btr bulkTransferRequest) toDomain() transferdomain.BulkTransfer {
-	bt := transferdomain.BulkTransfer{
-		Account: transferdomain.BankAccount{
+func (btr bulkTransferRequest) toDomain() controller.BulkTransfer {
+	bt := controller.BulkTransfer{
+		Account: controller.BankAccount{
 			OrganizationName: btr.OrganizationName,
 			OrganizationBIC:  btr.OrganizationBIC,
 			OrganizationIBAN: btr.OrganizationIBAN,
@@ -31,8 +31,8 @@ func (btr bulkTransferRequest) toDomain() transferdomain.BulkTransfer {
 
 type creditTransfers []creditTransfer
 
-func (cts creditTransfers) toDomain() []transferdomain.CreditTransfer {
-	domainTransfers := make([]transferdomain.CreditTransfer, 0, len(cts))
+func (cts creditTransfers) toDomain() []controller.CreditTransfer {
+	domainTransfers := make([]controller.CreditTransfer, 0, len(cts))
 
 	for _, transfer := range cts {
 		domainTransfers = append(domainTransfers, transfer.toDomain())
@@ -50,8 +50,8 @@ type creditTransfer struct {
 	Description      string      `json:"description" binding:"required"`
 }
 
-func (ct creditTransfer) toDomain() transferdomain.CreditTransfer {
-	return transferdomain.CreditTransfer{
+func (ct creditTransfer) toDomain() controller.CreditTransfer {
+	return controller.CreditTransfer{
 		AmountCents:      ct.amountCents(),
 		Currency:         ct.Currency,
 		CounterpartyName: ct.CounterpartyName,
@@ -80,8 +80,8 @@ func (s *Server) handleCreateBulkTransfer() gin.HandlerFunc {
 			return
 		}
 
-		if err := s.transferService.PerformBulkTransfer(
-			c, btr.toDomain(), transferdomain.ValidateBulkTransfer,
+		if err := s.transferController.PerformBulkTransfer(
+			c, btr.toDomain(), controller.ValidateBulkTransfer,
 		); err != nil {
 			s.logger.Printf("Bulk transfer failed: %s", err)
 			c.AbortWithStatus(http.StatusUnprocessableEntity)
