@@ -3,31 +3,77 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
-// TransferRepository specifies the methods required to save BulkTransfers to a
-// data store.
-type TransferRepository interface {
-	PerformBulkTransfer(context.Context, BulkTransfer, BulkTransferValidator) error
+// ErrInsufficientFunds signals that a bank account did not have enough funds to
+// complete a bulk transfer.
+var ErrInsufficientFunds = errors.New("insufficient funds to settle bulk transfer")
+
+type Logger interface {
+	Printf(format string, args ...any)
+}
+
+// Transactor is an object capable of behaving like a transaction.
+type Transactor interface {
+	Commit() error
+	Rollback() error
+}
+
+// AtomicTransferRepository specifies the methods required to save BulkTransfers
+// to a data store atomically.
+type AtomicTransferRepository interface {
+	BeginTx(ctx context.Context) (Transactor, error)
+	GetBankAccountByIBAN(ctx context.Context, tx Transactor, iban string) (BankAccount, error)
+	UpdateBankAccount(ctx context.Context, tx Transactor, ba BankAccount) error
+	SaveCreditTransfers(ctx context.Context, tx Transactor, transfers []CreditTransfer) error
 }
 
 // TransferController provides the fields and methods required to perform bulk
 // transfers.
 type TransferController struct {
-	repo TransferRepository
+	repo   AtomicTransferRepository
+	logger Logger
 }
 
 // NewTransferController configures and returns a Service.
-func NewTransferController(repo TransferRepository) *TransferController {
+func NewTransferController(repo AtomicTransferRepository) *TransferController {
 	return &TransferController{repo: repo}
 }
 
 // PerformBulkTransfer exposes the underlying repo's PerformBulkTransfer method
 // as a convenience.
-func (tc *TransferController) PerformBulkTransfer(
-	ctx context.Context, bt BulkTransfer, validate BulkTransferValidator,
-) error {
-	return tc.repo.PerformBulkTransfer(ctx, bt, validate)
+func (tc *TransferController) PerformBulkTransfer(ctx context.Context, bt BulkTransfer) error {
+	tx, err := tc.repo.BeginTx(ctx)
+	if err != nil {
+		return fmt.Errorf("tc.repo.BeginTx: %w", err)
+	}
+
+	defer tx.Rollback() //nolint:errcheck
+
+	bankAccount, err := tc.repo.GetBankAccountByIBAN(ctx, tx, bt.Account.OrganizationIBAN)
+	if err != nil {
+		return fmt.Errorf("tc.repo.GetBankAccountByIBAN: %w", err)
+	}
+
+	bankAccount.BalanceCents -= bt.TotalCents()
+	if bankAccount.BalanceCents < 0 {
+		return ErrInsufficientFunds
+	}
+
+	if err := tc.repo.UpdateBankAccount(ctx, tx, bankAccount); err != nil {
+		return fmt.Errorf("tc.repo.UpdateBankAccount: %w", err)
+	}
+
+	if err := tc.repo.SaveCreditTransfers(ctx, tx, bt.CreditTransfers); err != nil {
+		return fmt.Errorf("tc.repo.SaveCreditTransfers: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("tx.Commit: %w", err)
+	}
+
+	return nil
 }
 
 // BulkTransfer represents a bulk transfer and its associated business logic.
@@ -73,28 +119,4 @@ type CreditTransfer struct {
 	CounterpartyBIC  string
 	CounterpartyIBAN string
 	Description      string
-}
-
-// ErrInsufficientFunds signals that a bank account did not have enough funds to
-// complete a bulk transfer.
-var ErrInsufficientFunds = errors.New("insufficient funds to settle bulk transfer")
-
-// BulkTransferValidator represents a function that returns an error if the
-// BulkTransfer is in an invalid state.
-type BulkTransferValidator func(BulkTransfer) error
-
-// ValidateBulkTransfer is a BuklTransferValidator that calls all validations
-// related to Bulktransfer
-func ValidateBulkTransfer(bt BulkTransfer) error {
-	return ValidatePositiveBankBalance(bt)
-}
-
-// ValidatePositiveBankBalance asserts that the BulkTransfer's associated
-// BankAccount remains in credit after the CreditTransfers have been applied.
-func ValidatePositiveBankBalance(bt BulkTransfer) error {
-	if bt.Account.BalanceCents < 0 {
-		return ErrInsufficientFunds
-	}
-
-	return nil
 }
