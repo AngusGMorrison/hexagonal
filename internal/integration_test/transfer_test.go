@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres/transferrepo"
+	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -131,7 +131,7 @@ func TestBulkTransfer(t *testing.T) {
 
 		assert.EqualValues(3, transactionCount, "transactions created")
 
-		expectedTransaction := transferrepo.TransactionRow{
+		expectedTransaction := postgres.TransactionRow{
 			BankAccountID:    expectedBankAccount.ID,
 			CounterpartyName: "Bip Bip",
 			CounterpartyIBAN: "EE383680981021245685",

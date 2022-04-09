@@ -33,9 +33,10 @@ type EnvConfig struct {
 // App represents environment variables related to the identity and general
 // function of the application.
 type App struct {
-	Name string `envconfig:"APP_NAME" default:"hexagonal"`
-	Env  string `envconfig:"APP_ENV" required:"true"`
-	Root string `envconfig:"APP_ROOT" required:"true"`
+	Name    string `envconfig:"APP_NAME" default:"hexagonal"`
+	Env     string `envconfig:"APP_ENV" required:"true"`
+	Root    string `envconfig:"APP_ROOT" required:"true"`
+	GinMode string `envconfig:"GIN_MODE" required:"true"`
 }
 
 // HTTP represents all HTTP-related environment variables.

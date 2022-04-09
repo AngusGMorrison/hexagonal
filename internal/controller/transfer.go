@@ -1,33 +1,33 @@
-// Package transferdomain encapsulates all business logic in the transfer domain.
-package transferdomain
+package controller
 
 import (
 	"context"
 	"errors"
 )
 
-// Repository specifies the methods required to save BulkTransfers to a data
-// store.
-type Repository interface {
+// TransferRepository specifies the methods required to save BulkTransfers to a
+// data store.
+type TransferRepository interface {
 	PerformBulkTransfer(context.Context, BulkTransfer, BulkTransferValidator) error
 }
 
-// Service provides the fields and methods required to perform bulk transfer.
-type Service struct {
-	repo Repository
+// TransferController provides the fields and methods required to perform bulk
+// transfers.
+type TransferController struct {
+	repo TransferRepository
 }
 
-// NewService configures and returns a Service.
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+// NewTransferController configures and returns a Service.
+func NewTransferController(repo TransferRepository) *TransferController {
+	return &TransferController{repo: repo}
 }
 
 // PerformBulkTransfer exposes the underlying repo's PerformBulkTransfer method
 // as a convenience.
-func (s *Service) PerformBulkTransfer(
+func (tc *TransferController) PerformBulkTransfer(
 	ctx context.Context, bt BulkTransfer, validate BulkTransferValidator,
 ) error {
-	return s.repo.PerformBulkTransfer(ctx, bt, validate)
+	return tc.repo.PerformBulkTransfer(ctx, bt, validate)
 }
 
 // BulkTransfer represents a bulk transfer and its associated business logic.

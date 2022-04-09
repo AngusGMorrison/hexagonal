@@ -1,5 +1,4 @@
-// Package migrate supports Postgres database migrations.
-package migrate
+package postgres
 
 import (
 	"errors"
@@ -15,8 +14,8 @@ import (
 
 const _migrationPath = "file://migrations"
 
-// Config is a configuration object for migrations.
-type Config struct {
+// MigrateConfig is a configuration object for migrations.
+type MigrateConfig struct {
 	// ForceVersion specifies the migration version to force-set.
 	ForceVersion int
 
@@ -29,7 +28,7 @@ type Config struct {
 }
 
 // Migrate triggers a migration on the database using the specified Config.
-func Migrate(databaseURL string, logger *log.Logger, config Config) error {
+func Migrate(databaseURL string, logger *log.Logger, config MigrateConfig) error {
 	migrator, err := newMigrator(databaseURL, logger, config)
 	if err != nil {
 		return err
@@ -49,10 +48,10 @@ func Migrate(databaseURL string, logger *log.Logger, config Config) error {
 type migrator struct {
 	migrate *migrate.Migrate
 	logger  *log.Logger
-	config  Config
+	config  MigrateConfig
 }
 
-func newMigrator(databaseURL string, logger *log.Logger, config Config) (*migrator, error) {
+func newMigrator(databaseURL string, logger *log.Logger, config MigrateConfig) (*migrator, error) {
 	inner, err := migrate.New(_migrationPath, databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("create new migrator: %w", err)
@@ -114,6 +113,19 @@ func (m *migrator) up() error {
 	m.logger.Println("Migration complete.")
 
 	return nil
+}
+
+type migrateLogger struct {
+	logger  *log.Logger
+	verbose bool
+}
+
+func (ml *migrateLogger) Printf(format string, v ...interface{}) {
+	ml.logger.Printf(format, v...)
+}
+
+func (ml *migrateLogger) Verbose() bool {
+	return ml.verbose
 }
 
 func shouldForce(version int) bool {

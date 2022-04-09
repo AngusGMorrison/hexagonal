@@ -12,41 +12,41 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// Postgres wraps a config object and a *sqlx.DB, allowing us to write our own methods
+// DB wraps a config object and a *sqlx.DB, allowing us to write our own methods
 // on the database struct.
-type Postgres struct {
+type DB struct {
 	config envconfig.DB
-	db     *sqlx.DB
+	sqlxDB *sqlx.DB
 }
 
-// New returns a configured Postgres database that is ready to use, or an error
-// if the connection can't be established.
-func New(cfg envconfig.DB) (*Postgres, error) {
-	db, err := sqlx.Open("postgres", cfg.URL())
+// NewDB returns a configured Postgres database that is ready to use, or an
+// error if the connection can't be established.
+func NewDB(cfg envconfig.DB) (*DB, error) {
+	sqlxDB, err := sqlx.Open("postgres", cfg.URL())
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
-	pg := Postgres{
+	db := DB{
 		config: cfg,
-		db:     db,
+		sqlxDB: sqlxDB,
 	}
 
-	pg.db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
-	pg.db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
-	pg.db.SetMaxIdleConns(cfg.MaxIdleConns)
-	pg.db.SetMaxOpenConns(cfg.MaxOpenConns)
+	db.sqlxDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+	db.sqlxDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	db.sqlxDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	db.sqlxDB.SetMaxOpenConns(cfg.MaxOpenConns)
 
-	if err := pg.ping(); err != nil {
+	if err := db.ping(); err != nil {
 		return nil, err
 	}
 
-	return &pg, nil
+	return &db, nil
 }
 
 // BeginTxx starts and returns a new sqlx transaction.
-func (pg *Postgres) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
-	tx, err := pg.db.BeginTxx(ctx, opts)
+func (db *DB) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
+	tx, err := db.sqlxDB.BeginTxx(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("BeginTxx: %w", err)
 	}
@@ -57,50 +57,50 @@ func (pg *Postgres) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx
 // BindNamed binds a named query, replacing its named arguments with Postgres
 // positional bindvars and producing a slice of args in the correct binding
 // order.
-func (pg *Postgres) BindNamed(query string, arg any) (string, []any, error) {
-	return pg.db.BindNamed(query, arg)
+func (db *DB) BindNamed(query string, arg any) (string, []any, error) {
+	return db.sqlxDB.BindNamed(query, arg)
 }
 
 // Get a single row, scanning the result into dest. Placeholder parameters are
 // replaced with supplied args.
-func (pg *Postgres) Get(dest any, query string, args ...any) error {
-	return pg.db.Get(dest, query, args...)
+func (db *DB) Get(dest any, query string, args ...any) error {
+	return db.sqlxDB.Get(dest, query, args...)
 }
 
 // Select executes the query and scans each row into dest, which must be slice.
-func (pg *Postgres) Select(dest any, query string, args ...any) error {
-	return pg.db.Select(dest, query, args...)
+func (db *DB) Select(dest any, query string, args ...any) error {
+	return db.sqlxDB.Select(dest, query, args...)
 }
 
 // Exec executes the query and returns the result.
-func (pg *Postgres) Exec(query string, args ...any) (sql.Result, error) {
-	return pg.db.Exec(query, args...)
+func (db *DB) Exec(query string, args ...any) (sql.Result, error) {
+	return db.sqlxDB.Exec(query, args...)
 }
 
 // NamedExec executes a query, replaced named arguments with fields from arg.
-func (pg *Postgres) NamedExec(query string, arg any) (sql.Result, error) {
-	return pg.db.NamedExec(query, arg)
+func (db *DB) NamedExec(query string, arg any) (sql.Result, error) {
+	return db.sqlxDB.NamedExec(query, arg)
 }
 
 // LoadFile loads an entire SQL file into memory and executes it.
-func (pg *Postgres) LoadFile(path string) (*sql.Result, error) {
-	return sqlx.LoadFile(pg.db, path)
+func (db *DB) LoadFile(path string) (*sql.Result, error) {
+	return sqlx.LoadFile(db.sqlxDB, path)
 }
 
 // Close closes the underlying database connection.
-func (pg *Postgres) Close() error {
-	if err := pg.db.Close(); err != nil {
+func (db *DB) Close() error {
+	if err := db.sqlxDB.Close(); err != nil {
 		return fmt.Errorf("close inner database: %w", err)
 	}
 
 	return nil
 }
 
-func (pg *Postgres) ping() error {
-	ctx, cancel := context.WithTimeout(context.Background(), pg.config.ConnTimeout)
+func (db *DB) ping() error {
+	ctx, cancel := context.WithTimeout(context.Background(), db.config.ConnTimeout)
 	defer cancel()
 
-	if err := pg.db.PingContext(ctx); err != nil {
+	if err := db.sqlxDB.PingContext(ctx); err != nil {
 		return fmt.Errorf("ping database: %w", err)
 	}
 

@@ -29,9 +29,9 @@ func run() error {
 		return fmt.Errorf("envconfig.New: %w", err)
 	}
 
-	pg, err := postgres.New(env.DB)
+	db, err := postgres.NewDB(env.DB)
 	if err != nil {
-		return fmt.Errorf("postgres.New: %w", err)
+		return fmt.Errorf("postgres.NewDB: %w", err)
 	}
 
 	absSeedsPath, err := filepath.Abs(*seedsPath)
@@ -39,7 +39,7 @@ func run() error {
 		return fmt.Errorf("create absolute seeds path: %w", err)
 	}
 
-	_, err = pg.LoadFile(absSeedsPath)
+	_, err = db.LoadFile(absSeedsPath)
 	if err != nil {
 		return fmt.Errorf("load seeds file at %s: %w", absSeedsPath, err)
 	}
