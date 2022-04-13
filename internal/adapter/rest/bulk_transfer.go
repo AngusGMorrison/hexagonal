@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -8,12 +9,22 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// TransferController describes the methods a handler expects to call to perform
+// bulk transfers. Using an interface allows us to mock controllers when
+// testing. This interface should follow the concrete controller type.
+type TransferController interface {
+	PerformBulkTransfer(ctx context.Context, bt controller.BulkTransfer) error
+}
+
+// Statically verify that the interface and concrete type remain in sync.
+var _ TransferController = (*controller.TransferController)(nil)
+
 // bulkTransferRequest represents an incoming bulk transfer payload.
 type bulkTransferRequest struct {
 	OrganizationName string          `json:"organization_name" binding:"required"`
 	OrganizationBIC  string          `json:"organization_bic" binding:"required"`
 	OrganizationIBAN string          `json:"organization_iban" binding:"required"`
-	CreditTransfers  creditTransfers `json:"credit_transfers" binding:"required"`
+	CreditTransfers  creditTransfers `json:"credit_transfers" binding:"min=1"`
 }
 
 func (btr bulkTransferRequest) toDomain() controller.BulkTransfer {
@@ -80,9 +91,7 @@ func (s *Server) handleCreateBulkTransfer() gin.HandlerFunc {
 			return
 		}
 
-		if err := s.transferController.PerformBulkTransfer(
-			c, btr.toDomain(), controller.ValidateBulkTransfer,
-		); err != nil {
+		if err := s.transferController.PerformBulkTransfer(c, btr.toDomain()); err != nil {
 			s.logger.Printf("Bulk transfer failed: %s", err)
 			c.AbortWithStatus(http.StatusUnprocessableEntity)
 

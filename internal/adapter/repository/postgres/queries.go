@@ -6,27 +6,36 @@ import (
 	"path/filepath"
 )
 
-type queries map[string]string
+// RelativeQueryDir is the path to the query directory relative to the
+// application root folder. This is not necessarily the same as the path
+// relative to the running binary, so this should be joined to an absolute path
+// to the application root before use.
+func RelativeQueryDir() string {
+	return filepath.Join("internal", "adapter", "repository", "postgres", "sql")
+}
 
-func loadQueries(appRoot string, queryFilenames []string) (queries, error) {
-	absDir := absQueryDir(appRoot)
+// QueryFilename represents the filename of an PostgreSQL query file.
+type QueryFilename string
 
-	qs := make(queries, len(queryFilenames))
+// Queries maps the name of a query file to the string query.
+type Queries map[QueryFilename]string
 
-	for _, filename := range queryFilenames {
-		path := filepath.Join(absDir, filename)
+// Load appends the named queries from queryDir into a map of filenames to their
+// string contents.
+//
+// absQueryDir is an absolute path to a folder containing the specified query
+// files.
+func (q Queries) Load(absQueryDir string, filenames []QueryFilename) error {
+	for _, fn := range filenames {
+		path := filepath.Join(absQueryDir, string(fn))
 
 		queryBytes, err := ioutil.ReadFile(path)
 		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", path, err)
+			return fmt.Errorf("read %s: %w", path, err)
 		}
 
-		qs[filename] = string(queryBytes)
+		q[fn] = string(queryBytes)
 	}
 
-	return qs, nil
-}
-
-func absQueryDir(appRoot string) string {
-	return filepath.Join(appRoot, "queries", "transfer")
+	return nil
 }

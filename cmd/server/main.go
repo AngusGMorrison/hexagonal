@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
@@ -38,15 +39,16 @@ func run(logger *log.Logger) error {
 		}
 	}()
 
-	transferRepo, err := postgres.NewTransferRepository(db, envConfig.App)
+	transferQueryDir := filepath.Join(envConfig.App.Root, postgres.RelativeQueryDir(), "transfer")
+	repo, err := postgres.NewTransferRepository(db, transferQueryDir)
 	if err != nil {
-		return fmt.Errorf("create transfer Repository: %w", err)
+		return fmt.Errorf("create TransferRepository: %w", err)
 	}
 
-	transferService := controller.NewTransferController(transferRepo)
+	transferController := controller.NewTransferController(logger, repo)
 
 	// Inject the dependencies into the server.
-	server := rest.NewServer(logger, envConfig, transferService)
+	server := rest.NewServer(logger, envConfig, transferController)
 
 	return server.Run()
 }

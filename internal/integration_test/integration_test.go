@@ -27,29 +27,29 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	server, err := NewServer()
+	logger := log.New(os.Stdout, "hexagonal_test ", log.LstdFlags)
+
+	server, err := NewServer(logger)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("Create server: %v\n", err)
 	}
 
 	go func() {
 		if err := server.Run(); err != nil {
-			panic(err)
+			logger.Fatalf("Run server: %v\n", err)
 		}
 	}()
 
 	defer func() {
 		if err := server.GracefulShutdown(); err != nil {
-			panic(err)
+			logger.Fatalf("Shut down server: %v\n", err)
 		}
 	}()
 
 	os.Exit(m.Run())
 }
 
-func NewServer() (*server.Server, error) {
-	logger := log.New(os.Stdout, "hexagonal_test ", log.LstdFlags)
-
+func NewServer(logger *log.Logger) (*server.Server, error) {
 	envConfig := defaultEnvConfig()
 
 	db, err := postgres.NewDB(envConfig.DB)
@@ -57,67 +57,88 @@ func NewServer() (*server.Server, error) {
 		return nil, fmt.Errorf("create database: %w", err)
 	}
 
-	transferRepo, err := postgres.NewTransferRepository(db, envConfig.App)
+	transferQueryDir := filepath.Join(envConfig.App.Root, postgres.RelativeQueryDir(), "transfer")
+	repo, err := postgres.NewTransferRepository(db, transferQueryDir)
 	if err != nil {
-		return nil, fmt.Errorf("create transfer Repository: %w", err)
+		return nil, fmt.Errorf("create TransferRepository: %w", err)
 	}
 
-	transferService := controller.NewTransferController(transferRepo)
+	transferService := controller.NewTransferController(logger, repo)
 	server := rest.NewServer(logger, envConfig, transferService)
 
 	return server, nil
 }
 
 const (
-	_insertBankAccountQuery = `
-		INSERT INTO bank_accounts (organization_name, iban, bic, balance_cents)
-		VALUES (:organization_name, :iban, :bic, :balance_cents)
-		RETURNING *;`
-
-	_getBankAccountByIDQuery = `
-		SELECT id, organization_name, iban, bic, balance_cents
-		FROM bank_accounts
-		WHERE id = $1;
-	`
-
-	_countBankAccountsQuery = `SELECT COUNT(*) FROM bank_accounts;`
-
-	_truncateBankAccountsQuery = `TRUNCATE TABLE bank_accounts CASCADE;`
-
-	_countTransactionsQuery = `SELECT COUNT(*) FROM transactions;`
-
-	_selectTransactionByCounterpartyNameQuery = `
-		SELECT id, bank_account_id, counterparty_name, counterparty_iban,
-			counterparty_bic, amount_cents, amount_currency, description
-		FROM transactions
-		WHERE counterparty_name = $1;`
-
-	_truncateTransactionsQuery = `TRUNCATE TABLE transactions;`
+	_insertBankAccount                    postgres.QueryFilename = "insert_bank_account.sql"
+	_getBankAccountByID                   postgres.QueryFilename = "get_bank_account_by_id.sql"
+	_countBankAccounts                    postgres.QueryFilename = "count_bank_accounts.sql"
+	_truncateBankAccounts                 postgres.QueryFilename = "truncate_bank_accounts.sql"
+	_countTransactions                    postgres.QueryFilename = "count_transactions.sql"
+	_selectTransactionsByCounterpartyName postgres.QueryFilename = "select_transactions_by_counterparty_name.sql"
+	_truncateTransactions                 postgres.QueryFilename = "truncate_transactions.sql"
 )
 
-type repository struct {
-	db *postgres.DB
+type testRepository struct {
+	db       *postgres.DB
+	queryDir string
+	queries  postgres.Queries
 }
 
-func (r *repository) insertBankAccount(
+func newTestRepository(db *postgres.DB, queryDir string) (*testRepository, error) {
+	repo := testRepository{
+		db:       db,
+		queryDir: queryDir,
+	}
+
+	if err := repo.loadQueries(); err != nil {
+		return nil, err
+	}
+
+	return &repo, nil
+}
+
+func (tr *testRepository) loadQueries() error {
+	queryFilenames := []postgres.QueryFilename{
+		_insertBankAccount,
+		_getBankAccountByID,
+		_countBankAccounts,
+		_truncateBankAccounts,
+		_countTransactions,
+		_selectTransactionsByCounterpartyName,
+		_truncateTransactions,
+	}
+
+	if tr.queries == nil {
+		tr.queries = make(postgres.Queries, len(queryFilenames))
+	}
+
+	if err := tr.queries.Load(tr.queryDir, queryFilenames); err != nil {
+		return fmt.Errorf("load test queries: %w", err)
+	}
+
+	return nil
+}
+
+func (tr *testRepository) insertBankAccount(
 	br postgres.BankAccountRow,
 ) (postgres.BankAccountRow, error) {
-	query, args, err := r.db.BindNamed(_insertBankAccountQuery, br)
+	query, args, err := tr.db.BindNamed(tr.queries[_insertBankAccount], br)
 	if err != nil {
 		return br, fmt.Errorf("db.BindNamed: %w", err)
 	}
 
-	if err := r.db.Get(&br, query, args...); err != nil {
+	if err := tr.db.Get(&br, query, args...); err != nil {
 		return br, fmt.Errorf("insertBankAccount: %w", err)
 	}
 
 	return br, nil
 }
 
-func (r *repository) getBankAccountByID(id int64) (postgres.BankAccountRow, error) {
+func (tr *testRepository) getBankAccountByID(id int64) (postgres.BankAccountRow, error) {
 	var row postgres.BankAccountRow
 
-	err := r.db.Get(&row, _getBankAccountByIDQuery, id)
+	err := tr.db.Get(&row, tr.queries[_getBankAccountByID], id)
 	if err != nil {
 		return row, fmt.Errorf("getBankAccount")
 	}
@@ -125,48 +146,48 @@ func (r *repository) getBankAccountByID(id int64) (postgres.BankAccountRow, erro
 	return row, nil
 }
 
-func (r *repository) countBankAccounts() (int64, error) {
+func (tr *testRepository) countBankAccounts() (int64, error) {
 	var count int64
 
-	if err := r.db.Get(&count, _countBankAccountsQuery); err != nil {
+	if err := tr.db.Get(&count, tr.queries[_countBankAccounts]); err != nil {
 		return 0, fmt.Errorf("countBankAccounts: %w", err)
 	}
 
 	return count, nil
 }
 
-func (r *repository) truncateBankAccounts() error {
-	if _, err := r.db.Exec(_truncateBankAccountsQuery); err != nil {
+func (tr *testRepository) truncateBankAccounts() error {
+	if _, err := tr.db.Exec(tr.queries[_truncateBankAccounts]); err != nil {
 		return fmt.Errorf("truncateBankAccounts: %w", err)
 	}
 
 	return nil
 }
 
-func (r *repository) countTransactions() (int64, error) {
+func (tr *testRepository) countTransactions() (int64, error) {
 	var count int64
 
-	if err := r.db.Get(&count, _countTransactionsQuery); err != nil {
+	if err := tr.db.Get(&count, tr.queries[_countTransactions]); err != nil {
 		return 0, fmt.Errorf("countTransactions: %w", err)
 	}
 
 	return count, nil
 }
 
-func (r *repository) selectTransactionsByCounterpartyName(
+func (tr *testRepository) selectTransactionsByCounterpartyName(
 	name string,
 ) (postgres.TransactionRows, error) {
 	var rows postgres.TransactionRows
 
-	if err := r.db.Select(&rows, _selectTransactionByCounterpartyNameQuery, name); err != nil {
+	if err := tr.db.Select(&rows, tr.queries[_selectTransactionsByCounterpartyName], name); err != nil {
 		return nil, fmt.Errorf("selectTransactionByCounterpartyName: %w", err)
 	}
 
 	return rows, nil
 }
 
-func (r *repository) truncateTransactions() error {
-	if _, err := r.db.Exec(_truncateTransactionsQuery); err != nil {
+func (tr *testRepository) truncateTransactions() error {
+	if _, err := tr.db.Exec(tr.queries[_truncateTransactions]); err != nil {
 		return fmt.Errorf("truncateTransactions: %w", err)
 	}
 
@@ -174,33 +195,39 @@ func (r *repository) truncateTransactions() error {
 }
 
 type infrastructure struct {
-	repo   *repository
+	logger *log.Logger
+	repo   *testRepository
 	client *http.Client
 }
 
-func newInfrastructure(env envconfig.EnvConfig) (*infrastructure, error) {
-	db, err := postgres.NewDB(env.DB)
+func newInfrastructure(envConfig envconfig.EnvConfig, logger *log.Logger) (*infrastructure, error) {
+	db, err := postgres.NewDB(envConfig.DB)
 	if err != nil {
 		return nil, fmt.Errorf("create database: %w", err)
 	}
 
+	testQueryDir := filepath.Join(envConfig.App.Root, postgres.RelativeQueryDir(), "transfer")
+	repo, err := newTestRepository(db, testQueryDir)
+	if err != nil {
+		return nil, fmt.Errorf("create testRepository: %w", err)
+	}
+
 	infra := infrastructure{
-		repo: &repository{
-			db: db,
-		},
+		logger: logger,
+		repo:   repo,
 		client: &http.Client{
-			Timeout: env.HTTP.ClientTimeout,
+			Timeout: envConfig.HTTP.ClientTimeout,
 		},
 	}
 
 	return &infra, nil
 }
 
-// mustCleanup is designed to be passed to (*testing.T).Cleanup to shut down the
+// cleanup is designed to be passed to (*testing.T).Cleanup to shut down the
 // infrastructure. Panics if shutdown fails.
-func (i *infrastructure) mustCleanup() {
+func (i *infrastructure) cleanup() {
 	if err := i.repo.db.Close(); err != nil {
-		panic(fmt.Errorf("db.Close: %w", err))
+		i.logger.Printf("Close database: %v", err)
 	}
 }
 

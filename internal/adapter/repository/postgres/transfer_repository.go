@@ -5,41 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/controller"
 	"github.com/jmoiron/sqlx"
 )
-
-const (
-	_getBankAccountByIBANQueryKey = "get_bank_account_by_iban.sql"
-	_updateBankAccountQueryKey    = "update_bank_account.sql"
-	_insertTransactionsQueryKey   = "insert_transactions.sql"
-)
-
-// TransferRepository provides access to the database tables of the transfers domain,
-// including bank account and transactions.
-type TransferRepository struct {
-	db      *DB
-	queries queries
-}
-
-// Statically verify that Repository satisfies controller.Repository.
-var _ controller.TransferRepository = (*TransferRepository)(nil)
-
-// NewTransferRepository returns a new TransferRepository.
-func NewTransferRepository(db *DB, appConfig envconfig.App) (*TransferRepository, error) {
-	q, err := loadQueries(appConfig.Root, transferQueryFilenames())
-	if err != nil {
-		return nil, fmt.Errorf("loadQueries: %w", err)
-	}
-
-	repo := TransferRepository{
-		db:      db,
-		queries: q,
-	}
-
-	return &repo, nil
-}
 
 // BankAccountRow represents a row of the bank_accounts table.
 type BankAccountRow struct {
@@ -109,94 +77,73 @@ func transactionRowFromDomain(domainTransfer controller.CreditTransfer) Transact
 	}
 }
 
-// PerformBulkTransfer executes the provided transfers atomically against a
-// single bank account. validate is called before committing the transaction. If
-// validation fails, the validation error is returned and the transaction is
-// rolled back.
-func (r *TransferRepository) PerformBulkTransfer(
+const (
+	_getBankAccountByIBAN QueryFilename = "get_bank_account_by_iban.sql"
+	_updateBankAccount    QueryFilename = "update_bank_account.sql"
+	_insertTransactions   QueryFilename = "insert_transactions.sql"
+)
+
+// TransferRepository provides the methods necessary to perform transfers.
+// Satisfies contorller.AtomicTransferRepository.
+type TransferRepository struct {
+	db       *DB
+	queryDir string
+	queries  Queries
+}
+
+// Statically verify that Repository satisfies controller.Repository.
+var _ controller.AtomicTransferRepository = (*TransferRepository)(nil)
+
+// NewTransferRepository returns a new transfer repository with its SQL queries
+// preloaded.
+//
+// queryDir is the absolute path to a directory containing the SQL files
+// required by TransferRepository.
+func NewTransferRepository(db *DB, queryDir string) (*TransferRepository, error) {
+	repo := TransferRepository{
+		db:       db,
+		queryDir: queryDir,
+	}
+
+	if err := repo.loadQueries(); err != nil {
+		return nil, err
+	}
+
+	return &repo, nil
+}
+
+// BeginSerializableTx starts a new sqlx transaction with isolation level
+// Serializable and returns it as a controller.Transactor for use in atomic
+// repository operations.
+func (tr *TransferRepository) BeginSerializableTx(ctx context.Context) (controller.Transactor, error) {
+	tx, err := tr.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, fmt.Errorf("BeginSerializableTx: %w", err)
+	}
+
+	return tx, nil
+}
+
+// GetBankAccountByIBANTx retrieves the bank account with the given IBAN using the
+// transactor. If there is no matching bank account, an error is returned.
+func (tr *TransferRepository) GetBankAccountByIBANTx(
 	ctx context.Context,
-	bulkTransfer controller.BulkTransfer,
-	validate controller.BulkTransferValidator,
-) error {
-	tx, err := r.db.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
-	}
-
-	defer tx.Rollback() //nolint:errcheck
-
-	bulkTransfer, err = r.debitAccount(ctx, tx, bulkTransfer)
-	if err != nil {
-		return err
-	}
-
-	bulkTransfer, err = r.createTransactions(ctx, tx, bulkTransfer)
-	if err != nil {
-		return err
-	}
-
-	if err = validate(bulkTransfer); err != nil {
-		return err
-	}
-
-	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("commit transaction: %w", err)
-	}
-
-	return nil
-}
-
-// debitAccount fetches the target account from the DB by IBAN and updates its
-// balance. The resulting state of the account is reflected in the returned
-// BulkTransfer.
-func (r *TransferRepository) debitAccount(
-	ctx context.Context, tx *sqlx.Tx, bulkTransfer controller.BulkTransfer,
-) (controller.BulkTransfer, error) {
-	account, err := r.getBankAccountWhereIBANTx(ctx, tx, bulkTransfer.Account.OrganizationIBAN)
-	if err != nil {
-		return bulkTransfer, err
-	}
-
-	account.BalanceCents -= bulkTransfer.TotalCents()
-
-	if account, err = r.updateBankAccountTx(ctx, tx, account); err != nil {
-		return bulkTransfer, err
-	}
-
-	bulkTransfer.Account = account
-
-	return bulkTransfer, nil
-}
-
-// createTransactions inserts the BulkTransfer's creditTransfers into the
-// database as transactions using the bulkTransfer.BankAccount.ID as the foreign
-// key. It then returns an updated BulkTransfer to reflect this change.
-func (r *TransferRepository) createTransactions(
-	ctx context.Context, tx *sqlx.Tx, bulkTransfer controller.BulkTransfer,
-) (controller.BulkTransfer, error) {
-	// Copy the credit transfers from the input bulkTranfer, assigning the
-	// account ID to each. Copying preserves the original state of the input
-	// bulkTransfer in the event of an error.
-	creditTransfers := make([]controller.CreditTransfer, len(bulkTransfer.CreditTransfers))
-
-	for i, transfer := range bulkTransfer.CreditTransfers {
-		transfer.BankAccountID = bulkTransfer.Account.ID
-		creditTransfers[i] = transfer
-	}
-
-	err := r.insertTransactionsTx(ctx, tx, creditTransfers)
-	if err != nil {
-		return bulkTransfer, err
-	}
-
-	return bulkTransfer, nil
-}
-
-func (r *TransferRepository) getBankAccountWhereIBANTx(
-	ctx context.Context, tx *sqlx.Tx, iban string,
+	transactor controller.Transactor,
+	iban string,
 ) (controller.BankAccount, error) {
+	tx, ok := transactor.(*sqlx.Tx)
+	if !ok {
+		return controller.BankAccount{}, TxTypeError{tx: tx}
+	}
+
 	var row BankAccountRow
-	if err := tx.GetContext(ctx, &row, r.queries[_getBankAccountByIBANQueryKey], iban); err != nil {
+
+	if err := tx.GetContext(
+		ctx,
+		&row,
+		tr.queries[_getBankAccountByIBAN],
+		iban,
+	); err != nil {
 		return controller.BankAccount{}, fmt.Errorf("get bank account with IBAN %q: %w",
 			iban, err)
 	}
@@ -204,30 +151,49 @@ func (r *TransferRepository) getBankAccountWhereIBANTx(
 	return row.toDomain(), nil
 }
 
-func (r *TransferRepository) updateBankAccountTx(
-	ctx context.Context, tx *sqlx.Tx, account controller.BankAccount,
-) (controller.BankAccount, error) {
-	stmt, err := tx.PrepareNamedContext(ctx, r.queries[_updateBankAccountQueryKey])
-	if err != nil {
-		return account, fmt.Errorf("prepare updateBankAccountQuery: %w", err)
-	}
-
-	row := bankAccountRowFromDomain(account)
-
-	if err := stmt.QueryRowxContext(ctx, row).StructScan(&row); err != nil {
-		return account, fmt.Errorf("update bank account with ID %d: %w", row.ID, err)
-	}
-
-	return row.toDomain(), nil
-}
-
-func (r *TransferRepository) insertTransactionsTx(
-	ctx context.Context, tx *sqlx.Tx, creditTransfers []controller.CreditTransfer,
+// UpdateBankAccountTx updates the bank account by ID using the transactor
+// provided.
+func (tr *TransferRepository) UpdateBankAccountTx(
+	ctx context.Context,
+	transactor controller.Transactor,
+	ba controller.BankAccount,
 ) error {
-	transactionRows := transactionRowsFromDomain(creditTransfers)
+	tx, ok := transactor.(*sqlx.Tx)
+	if !ok {
+		return TxTypeError{tx: tx}
+	}
+
+	baRow := bankAccountRowFromDomain(ba)
 
 	if _, err := tx.NamedExecContext(
-		ctx, r.queries[_insertTransactionsQueryKey], transactionRows,
+		ctx,
+		tr.queries[_updateBankAccount],
+		baRow,
+	); err != nil {
+		return fmt.Errorf("update bank account with ID %d: %w", baRow.ID, err)
+	}
+
+	return nil
+}
+
+// SaveCreditTransfersTx bulk inserts credit transfers using the transactor
+// provided.
+func (tr *TransferRepository) SaveCreditTransfersTx(
+	ctx context.Context,
+	transactor controller.Transactor,
+	transfers controller.CreditTransfers,
+) error {
+	tx, ok := transactor.(*sqlx.Tx)
+	if !ok {
+		return TxTypeError{tx: tx}
+	}
+
+	rows := transactionRowsFromDomain(transfers)
+
+	if _, err := tx.NamedExecContext(
+		ctx,
+		tr.queries[_insertTransactions],
+		rows,
 	); err != nil {
 		return fmt.Errorf("insert transactions: %w", err)
 	}
@@ -235,10 +201,20 @@ func (r *TransferRepository) insertTransactionsTx(
 	return nil
 }
 
-func transferQueryFilenames() []string {
-	return []string{
-		_getBankAccountByIBANQueryKey,
-		_updateBankAccountQueryKey,
-		_insertTransactionsQueryKey,
+func (tr *TransferRepository) loadQueries() error {
+	queryFilenames := []QueryFilename{
+		_getBankAccountByIBAN,
+		_updateBankAccount,
+		_insertTransactions,
 	}
+
+	if tr.queries == nil {
+		tr.queries = make(Queries, len(queryFilenames))
+	}
+
+	if err := tr.queries.Load(tr.queryDir, queryFilenames); err != nil {
+		return fmt.Errorf("load transfer queries: %w", err)
+	}
+
+	return nil
 }

@@ -20,16 +20,19 @@ func main() {
 }
 
 func run() error {
-	defaultSeedsPath := filepath.Join("fixtures", "seeds", "seeds.sql")
-	seedsPath := flag.String("path", defaultSeedsPath, "The location of the SQL seeds file to load")
+	var (
+		defaultSeedsPath = filepath.Join("fixtures", "seeds", "seeds.sql")
+		seedsPath        = flag.String("path", defaultSeedsPath, "The location of the SQL seeds file to load")
+	)
+
 	flag.Parse()
 
-	env, err := envconfig.New()
+	envConfig, err := envconfig.New()
 	if err != nil {
 		return fmt.Errorf("envconfig.New: %w", err)
 	}
 
-	db, err := postgres.NewDB(env.DB)
+	db, err := postgres.NewDB(envConfig.DB)
 	if err != nil {
 		return fmt.Errorf("postgres.NewDB: %w", err)
 	}

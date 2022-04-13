@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
+	"github.com/angusgmorrison/hexagonal/internal/controller"
 	"github.com/jmoiron/sqlx"
 
 	// Load postgres driver
@@ -15,43 +16,32 @@ import (
 // DB wraps a config object and a *sqlx.DB, allowing us to write our own methods
 // on the database struct.
 type DB struct {
-	config envconfig.DB
-	sqlxDB *sqlx.DB
+	config  envconfig.DB
+	sqlxDB  *sqlx.DB
+	queries Queries
 }
 
 // NewDB returns a configured Postgres database that is ready to use, or an
 // error if the connection can't be established.
-func NewDB(cfg envconfig.DB) (*DB, error) {
-	sqlxDB, err := sqlx.Open("postgres", cfg.URL())
+func NewDB(dbConfig envconfig.DB) (*DB, error) {
+	sqlxDB, err := sqlx.Open("postgres", dbConfig.URL())
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
 	db := DB{
-		config: cfg,
-		sqlxDB: sqlxDB,
+		config:  dbConfig,
+		sqlxDB:  sqlxDB,
+		queries: make(Queries),
 	}
 
-	db.sqlxDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
-	db.sqlxDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
-	db.sqlxDB.SetMaxIdleConns(cfg.MaxIdleConns)
-	db.sqlxDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	db.configureConns()
 
 	if err := db.ping(); err != nil {
 		return nil, err
 	}
 
 	return &db, nil
-}
-
-// BeginTxx starts and returns a new sqlx transaction.
-func (db *DB) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
-	tx, err := db.sqlxDB.BeginTxx(ctx, opts)
-	if err != nil {
-		return nil, fmt.Errorf("BeginTxx: %w", err)
-	}
-
-	return tx, nil
 }
 
 // BindNamed binds a named query, replacing its named arguments with Postgres
@@ -96,6 +86,23 @@ func (db *DB) Close() error {
 	return nil
 }
 
+// BeginTx returns a new database transaction.
+func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
+	tx, err := db.sqlxDB.BeginTxx(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("beginTx: %w", err)
+	}
+
+	return tx, nil
+}
+
+func (db *DB) configureConns() {
+	db.sqlxDB.SetConnMaxIdleTime(db.config.ConnMaxIdleTime)
+	db.sqlxDB.SetConnMaxLifetime(db.config.ConnMaxLifetime)
+	db.sqlxDB.SetMaxIdleConns(db.config.MaxIdleConns)
+	db.sqlxDB.SetMaxOpenConns(db.config.MaxOpenConns)
+}
+
 func (db *DB) ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), db.config.ConnTimeout)
 	defer cancel()
@@ -105,4 +112,14 @@ func (db *DB) ping() error {
 	}
 
 	return nil
+}
+
+// TxTypeError represents a failed conversion from a controller.Transactor
+// interface to an *sqlx.Tx.
+type TxTypeError struct {
+	tx controller.Transactor
+}
+
+func (t TxTypeError) Error() string {
+	return fmt.Sprintf("controller.Transactor with concrete type *sqlx.Tx required; got %T", t.tx)
 }

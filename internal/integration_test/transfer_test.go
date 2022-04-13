@@ -5,7 +5,9 @@ package integration_test
 import (
 	"bytes"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -17,12 +19,14 @@ import (
 func TestBulkTransfer(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
-	env := defaultEnvConfig()
 
-	infra, err := newInfrastructure(env)
+	env := defaultEnvConfig()
+	logger := log.New(os.Stdout, "TestBulkTransfer ", log.LstdFlags)
+
+	infra, err := newInfrastructure(env, logger)
 	require.NoError(err, "newInfrastructure")
 
-	t.Cleanup(infra.mustCleanup)
+	t.Cleanup(infra.cleanup)
 
 	t.Run("bank account has insufficient funds", func(t *testing.T) {
 		expectedBankAccount, err := infra.repo.insertBankAccount(defaultBankAccount())
@@ -38,10 +42,7 @@ func TestBulkTransfer(t *testing.T) {
 			assert.NoError(err, "truncateTransactions")
 		}()
 
-		fixturePath, err := filepath.Abs(
-			filepath.Join("..", "..", "fixtures", "requests", "422_insufficient_funds.json"))
-		require.NoError(err, "create path to fixture")
-
+		fixturePath := filepath.Join("..", "..", "fixtures", "requests", "422_insufficient_funds.json")
 		fixtureBytes, err := ioutil.ReadFile(fixturePath)
 		require.NoError(err, "read fixture file")
 
@@ -66,7 +67,7 @@ func TestBulkTransfer(t *testing.T) {
 		assert.Len(body, 0, "incorrect response body length")
 
 		gotBankAccount, err := infra.repo.getBankAccountByID(expectedBankAccount.ID)
-		require.NoError(err, "retrieve back account")
+		require.NoError(err, "retrieve bank account")
 
 		assert.Equal(expectedBankAccount, gotBankAccount, "bank account changed")
 
@@ -94,10 +95,7 @@ func TestBulkTransfer(t *testing.T) {
 			assert.NoError(err, "truncateTransactions")
 		}()
 
-		fixturePath, err := filepath.Abs(
-			filepath.Join("..", "..", "fixtures", "requests", "201_created.json"))
-		require.NoError(err, "create path to fixture")
-
+		fixturePath := filepath.Join("..", "..", "fixtures", "requests", "201_created.json")
 		fixtureBytes, err := ioutil.ReadFile(fixturePath)
 		require.NoError(err, "read fixture file")
 
@@ -122,7 +120,7 @@ func TestBulkTransfer(t *testing.T) {
 		assert.Len(body, 0, "incorrect response body length")
 
 		gotBankAccount, err := infra.repo.getBankAccountByID(expectedBankAccount.ID)
-		require.NoError(err, "retrieve back account")
+		require.NoError(err, "retrieve bank account")
 
 		assert.Equal(expectedBankAccount, gotBankAccount, "bank account changed")
 
