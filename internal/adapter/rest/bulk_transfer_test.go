@@ -68,8 +68,8 @@ func TestHandleBulkTransfer_BadRequest(t *testing.T) {
 			t.Parallel()
 
 			var (
-				transferController = restmock.TransferController{}
-				server             = NewServer(logger, defaultConfig(), &transferController)
+				transactionController = restmock.TransactionController{}
+				server                = NewServer(logger, defaultConfig(), &transactionController)
 			)
 
 			fixturePath := filepath.Join("testdata", tc.fixtureFilename)
@@ -124,8 +124,8 @@ func TestHandleBulkTransfer_ValidRequest(t *testing.T) {
 			t.Parallel()
 
 			var (
-				transferController = restmock.TransferController{}
-				server             = NewServer(logger, defaultConfig(), &transferController)
+				transactionController = restmock.TransactionController{}
+				server                = NewServer(logger, defaultConfig(), &transactionController)
 			)
 
 			fixturePath := filepath.Join("testdata", tc.fixtureFilename)
@@ -152,15 +152,15 @@ func TestHandleBulkTransfer_ValidRequest(t *testing.T) {
 				},
 			}
 
-			transferController.On(
-				"PerformBulkTransfer",
+			transactionController.On(
+				"BulkTransaction",
 				mock.AnythingOfType("*gin.Context"),
 				expectedBTR.toDomain(),
 			).Return(tc.controllerErr)
 
 			server.ServeHTTP(w, r)
 
-			transferController.AssertExpectations(t)
+			transactionController.AssertExpectations(t)
 
 			body, err := ioutil.ReadAll(w.Body)
 			require.NoError(err)

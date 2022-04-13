@@ -29,14 +29,14 @@ type Server struct {
 
 	// Controllers are the interfaces by which handlers communicate requests to
 	// business logic.
-	transferController TransferController
+	transactionController TransactionController
 }
 
 // NewServer returns a new hexagonal server configured using the provided Config.
 func NewServer(
 	logger *log.Logger,
 	envConfig envconfig.EnvConfig,
-	transferController TransferController,
+	transactionController TransactionController,
 ) *Server {
 	server := Server{
 		config: envConfig,
@@ -46,8 +46,8 @@ func NewServer(
 			ReadTimeout:  envConfig.HTTP.ReadTimeout,
 			WriteTimeout: envConfig.HTTP.WriteTimeout,
 		},
-		errorStream:        make(chan error, 1),
-		transferController: transferController,
+		errorStream:           make(chan error, 1),
+		transactionController: transactionController,
 	}
 
 	server.setupRoutes()

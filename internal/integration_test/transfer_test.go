@@ -4,6 +4,7 @@ package integration_test
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,7 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
+	"github.com/angusgmorrison/hexagonal/internal/controller"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,16 +30,17 @@ func TestBulkTransfer(t *testing.T) {
 	t.Cleanup(infra.cleanup)
 
 	t.Run("bank account has insufficient funds", func(t *testing.T) {
-		expectedBankAccount, err := infra.repo.insertBankAccount(defaultBankAccount())
+		expectedBankAccount, err := infra.bankAccountRepo.Insert(
+			context.Background(), defaultBankAccount())
 		require.NoError(err, "insertBankAccount")
 
 		defer func() {
 			// Use assert to ensure that if one table fails to truncate, the
 			// other truncation is still attempted.
-			err := infra.repo.truncateBankAccounts()
+			err := infra.bankAccountRepo.Truncate(context.Background())
 			assert.NoError(err, "truncateBankAccounts")
 
-			err = infra.repo.truncateTransactions()
+			err = infra.transactionRepo.Truncate(context.Background())
 			assert.NoError(err, "truncateTransactions")
 		}()
 
@@ -66,19 +68,21 @@ func TestBulkTransfer(t *testing.T) {
 
 		assert.Len(body, 0, "incorrect response body length")
 
-		gotBankAccount, err := infra.repo.getBankAccountByID(expectedBankAccount.ID)
+		gotBankAccount, err := infra.bankAccountRepo.FindByID(
+			context.Background(), expectedBankAccount.ID)
 		require.NoError(err, "retrieve bank account")
 
 		assert.Equal(expectedBankAccount, gotBankAccount, "bank account changed")
 
-		transactionCount, err := infra.repo.countTransactions()
+		transactionCount, err := infra.transactionRepo.Count(context.Background())
 		require.NoError(err, "count transactions")
 
 		assert.Zero(transactionCount, "transactions created")
 	})
 
 	t.Run("bank account has enough funds", func(t *testing.T) {
-		expectedBankAccount, err := infra.repo.insertBankAccount(defaultBankAccount())
+		expectedBankAccount, err := infra.bankAccountRepo.Insert(
+			context.Background(), defaultBankAccount())
 		require.NoError(err, "insertBankAccount")
 
 		totalTransferCents := int64(6225150)
@@ -88,11 +92,11 @@ func TestBulkTransfer(t *testing.T) {
 		defer func() {
 			// Use assert to ensure that if one table fails to truncate, the
 			// other truncation is still attempted.
-			err := infra.repo.truncateBankAccounts()
-			assert.NoError(err, "truncateBankAccounts")
+			err := infra.bankAccountRepo.Truncate(context.Background())
+			assert.NoError(err, "bankAccountRepo.Truncate")
 
-			err = infra.repo.truncateTransactions()
-			assert.NoError(err, "truncateTransactions")
+			err = infra.transactionRepo.Truncate(context.Background())
+			assert.NoError(err, "ttransactionRepo.Truncate")
 		}()
 
 		fixturePath := filepath.Join("..", "..", "fixtures", "requests", "201_created.json")
@@ -119,28 +123,28 @@ func TestBulkTransfer(t *testing.T) {
 
 		assert.Len(body, 0, "incorrect response body length")
 
-		gotBankAccount, err := infra.repo.getBankAccountByID(expectedBankAccount.ID)
+		gotBankAccount, err := infra.bankAccountRepo.FindByID(context.Background(), expectedBankAccount.ID)
 		require.NoError(err, "retrieve bank account")
 
 		assert.Equal(expectedBankAccount, gotBankAccount, "bank account changed")
 
-		transactionCount, err := infra.repo.countTransactions()
+		transactionCount, err := infra.transactionRepo.Count(context.Background())
 		require.NoError(err, "count transactions")
 
 		assert.EqualValues(3, transactionCount, "transactions created")
 
-		expectedTransaction := postgres.TransactionRow{
+		expectedTransaction := controller.Transaction{
 			BankAccountID:    expectedBankAccount.ID,
 			CounterpartyName: "Bip Bip",
 			CounterpartyIBAN: "EE383680981021245685",
 			CounterpartyBIC:  "CRLYFRPPTOU",
-			AmountCurrency:   "EUR",
+			Currency:         "EUR",
 			AmountCents:      1450,
 			Description:      "Wonderland/4410",
 		}
 
-		gotTransactions, err := infra.repo.selectTransactionsByCounterpartyName(
-			expectedTransaction.CounterpartyName)
+		gotTransactions, err := infra.transactionRepo.SelectByCounterpartyName(
+			context.Background(), expectedTransaction.CounterpartyName)
 		require.NoError(err, "select transactions")
 
 		assert.Len(gotTransactions, 1,
@@ -151,4 +155,13 @@ func TestBulkTransfer(t *testing.T) {
 
 		assert.Equal(expectedTransaction, gotTransaction, "unequal transactions")
 	})
+}
+
+func defaultBankAccount() controller.BankAccount {
+	return controller.BankAccount{
+		OrganizationName: "ACME Corp",
+		OrganizationBIC:  "OIVUSCLQXXX",
+		OrganizationIBAN: "FR10474608000002006107XXXXX",
+		BalanceCents:     10000000,
+	}
 }

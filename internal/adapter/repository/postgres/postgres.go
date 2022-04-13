@@ -13,12 +13,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// DB wraps a config object and a *sqlx.DB, allowing us to write our own methods
-// on the database struct.
+// DB is a thin wrapper around an *sqlx.DB, allowing us to write our own methods
+// on the database struct, expose only the methods required by our repositories
+// and enforce conventions, such as always requiring a context to be passed when
+// querying the DB.
 type DB struct {
-	config  envconfig.DB
-	sqlxDB  *sqlx.DB
-	queries Queries
+	config envconfig.DB
+	sqlxDB *sqlx.DB
 }
 
 // NewDB returns a configured Postgres database that is ready to use, or an
@@ -30,9 +31,8 @@ func NewDB(dbConfig envconfig.DB) (*DB, error) {
 	}
 
 	db := DB{
-		config:  dbConfig,
-		sqlxDB:  sqlxDB,
-		queries: make(Queries),
+		config: dbConfig,
+		sqlxDB: sqlxDB,
 	}
 
 	db.configureConns()
@@ -53,23 +53,23 @@ func (db *DB) BindNamed(query string, arg any) (string, []any, error) {
 
 // Get a single row, scanning the result into dest. Placeholder parameters are
 // replaced with supplied args.
-func (db *DB) Get(dest any, query string, args ...any) error {
-	return db.sqlxDB.Get(dest, query, args...)
+func (db *DB) Get(ctx context.Context, dest any, query string, args ...any) error {
+	return db.sqlxDB.GetContext(ctx, dest, query, args...)
 }
 
 // Select executes the query and scans each row into dest, which must be slice.
-func (db *DB) Select(dest any, query string, args ...any) error {
-	return db.sqlxDB.Select(dest, query, args...)
+func (db *DB) Select(ctx context.Context, dest any, query string, args ...any) error {
+	return db.sqlxDB.SelectContext(ctx, dest, query, args...)
 }
 
 // Exec executes the query and returns the result.
-func (db *DB) Exec(query string, args ...any) (sql.Result, error) {
-	return db.sqlxDB.Exec(query, args...)
+func (db *DB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return db.sqlxDB.ExecContext(ctx, query, args...)
 }
 
 // NamedExec executes a query, replaced named arguments with fields from arg.
-func (db *DB) NamedExec(query string, arg any) (sql.Result, error) {
-	return db.sqlxDB.NamedExec(query, arg)
+func (db *DB) NamedExec(ctx context.Context, query string, arg any) (sql.Result, error) {
+	return db.sqlxDB.NamedExecContext(ctx, query, arg)
 }
 
 // LoadFile loads an entire SQL file into memory and executes it.
@@ -112,6 +112,20 @@ func (db *DB) ping() error {
 	}
 
 	return nil
+}
+
+func truncationPermitted(env string) bool {
+	return env == "development" || env == "test"
+}
+
+// UnpermittedTruncationError is used to signal a truncation attempt in an
+// environment which does not support it.
+type UnpermittedTruncationError struct {
+	env string
+}
+
+func (u UnpermittedTruncationError) Error() string {
+	return fmt.Sprintf("truncation not permitted in environment %q", u.env)
 }
 
 // TxTypeError represents a failed conversion from a controller.Transactor

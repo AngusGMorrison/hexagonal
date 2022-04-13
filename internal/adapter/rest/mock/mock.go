@@ -8,15 +8,15 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// TransferController satisfies rest.TransferController.
-type TransferController struct {
+// TransactionController satisfies rest.TransactionController.
+type TransactionController struct {
 	mock.Mock
 }
 
-// PerformBulkTransfer returns the error passed to the mock.
-func (tc *TransferController) PerformBulkTransfer(
+// BulkTransaction returns the error passed to the mock.
+func (tc *TransactionController) BulkTransaction(
 	ctx context.Context,
-	bt controller.BulkTransfer,
+	bt controller.BulkTransaction,
 ) error {
 	args := tc.Called(ctx, bt)
 

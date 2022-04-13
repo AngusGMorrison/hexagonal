@@ -9,15 +9,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TransferController describes the methods a handler expects to call to perform
-// bulk transfers. Using an interface allows us to mock controllers when
+// TransactionController describes the methods a handler expects to call to
+// transfers. Using an interface allows us to mock controllers when
 // testing. This interface should follow the concrete controller type.
-type TransferController interface {
-	PerformBulkTransfer(ctx context.Context, bt controller.BulkTransfer) error
+type TransactionController interface {
+	BulkTransaction(ctx context.Context, bt controller.BulkTransaction) error
 }
 
 // Statically verify that the interface and concrete type remain in sync.
-var _ TransferController = (*controller.TransferController)(nil)
+var _ TransactionController = (*controller.TransactionController)(nil)
 
 // bulkTransferRequest represents an incoming bulk transfer payload.
 type bulkTransferRequest struct {
@@ -27,14 +27,14 @@ type bulkTransferRequest struct {
 	CreditTransfers  creditTransfers `json:"credit_transfers" binding:"min=1"`
 }
 
-func (btr bulkTransferRequest) toDomain() controller.BulkTransfer {
-	bt := controller.BulkTransfer{
+func (btr bulkTransferRequest) toDomain() controller.BulkTransaction {
+	bt := controller.BulkTransaction{
 		Account: controller.BankAccount{
 			OrganizationName: btr.OrganizationName,
 			OrganizationBIC:  btr.OrganizationBIC,
 			OrganizationIBAN: btr.OrganizationIBAN,
 		},
-		CreditTransfers: btr.CreditTransfers.toDomain(),
+		Transactions: btr.CreditTransfers.toDomain(),
 	}
 
 	return bt
@@ -42,14 +42,14 @@ func (btr bulkTransferRequest) toDomain() controller.BulkTransfer {
 
 type creditTransfers []creditTransfer
 
-func (cts creditTransfers) toDomain() []controller.CreditTransfer {
-	domainTransfers := make([]controller.CreditTransfer, 0, len(cts))
+func (cts creditTransfers) toDomain() controller.Transactions {
+	transactions := make(controller.Transactions, 0, len(cts))
 
 	for _, transfer := range cts {
-		domainTransfers = append(domainTransfers, transfer.toDomain())
+		transactions = append(transactions, transfer.toDomain())
 	}
 
-	return domainTransfers
+	return transactions
 }
 
 type creditTransfer struct {
@@ -61,8 +61,8 @@ type creditTransfer struct {
 	Description      string      `json:"description" binding:"required"`
 }
 
-func (ct creditTransfer) toDomain() controller.CreditTransfer {
-	return controller.CreditTransfer{
+func (ct creditTransfer) toDomain() controller.Transaction {
+	return controller.Transaction{
 		AmountCents:      ct.amountCents(),
 		Currency:         ct.Currency,
 		CounterpartyName: ct.CounterpartyName,
@@ -91,7 +91,7 @@ func (s *Server) handleCreateBulkTransfer() gin.HandlerFunc {
 			return
 		}
 
-		if err := s.transferController.PerformBulkTransfer(c, btr.toDomain()); err != nil {
+		if err := s.transactionController.BulkTransaction(c, btr.toDomain()); err != nil {
 			s.logger.Printf("Bulk transfer failed: %s", err)
 			c.AbortWithStatus(http.StatusUnprocessableEntity)
 

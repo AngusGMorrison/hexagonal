@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 )
 
-// RelativeQueryDir is the path to the query directory relative to the
+// RelativeQueryDir is the path to the postgres query directory relative to the
 // application root folder. This is not necessarily the same as the path
 // relative to the running binary, so this should be joined to an absolute path
-// to the application root before use.
+// representing the application root before use.
 func RelativeQueryDir() string {
 	return filepath.Join("internal", "adapter", "repository", "postgres", "sql")
 }

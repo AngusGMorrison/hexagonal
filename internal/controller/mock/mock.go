@@ -73,7 +73,7 @@ func (atr *AtomicTransferRepository) UpdateBankAccount(
 func (atr *AtomicTransferRepository) SaveCreditTransfers(
 	ctx context.Context,
 	tx controller.Transactor,
-	transfers controller.CreditTransfers,
+	transfers controller.Transactions,
 ) error {
 	args := atr.Called(ctx, tx, transfers)
 
