@@ -169,7 +169,7 @@ func (tr *TransactionRepository) Truncate(ctx context.Context) error {
 }
 
 func (tr *TransactionRepository) loadQueries() error {
-	queryDir := filepath.Join(tr.appConfig.Root, RelativeQueryDir(), "transaction")
+	queryDir := filepath.Join(tr.appConfig.Root, RelativeQueryDir(), "transactions")
 	queryFilenames := []QueryFilename{
 		_countTransactions,
 		_insertTransactions,

@@ -203,7 +203,7 @@ func (bar *BankAccountRepository) Truncate(ctx context.Context) error {
 }
 
 func (bar *BankAccountRepository) loadQueries() error {
-	queryDir := filepath.Join(bar.appConfig.Root, RelativeQueryDir(), "bank_account")
+	queryDir := filepath.Join(bar.appConfig.Root, RelativeQueryDir(), "bank_accounts")
 	queryFilenames := []QueryFilename{
 		_countBankAccounts,
 		_findBankAccountByIBAN,
