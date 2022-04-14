@@ -16,7 +16,7 @@ import (
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/rest"
 	server "github.com/angusgmorrison/hexagonal/internal/adapter/rest"
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 )
 
 const (
@@ -66,7 +66,7 @@ func NewServer(logger *log.Logger) (*server.Server, error) {
 		return nil, fmt.Errorf("create TransactionRepository: %w", err)
 	}
 
-	transferService := controller.NewTransactionController(
+	transferService := service.NewTransactionService(
 		logger, bankAccountRepo, transactionRepo)
 	server := rest.NewServer(logger, envConfig, transferService)
 

@@ -1,4 +1,4 @@
-package controller
+package service
 
 import (
 	"context"
@@ -37,21 +37,21 @@ type logger interface {
 	Printf(format string, args ...any)
 }
 
-// TransactionController provides the fields and methods required to perform bulk
+// TransactionService provides the fields and methods required to perform bulk
 // transfers.
-type TransactionController struct {
+type TransactionService struct {
 	logger          logger
 	bankAccountRepo AtomicBankAccountRepository
 	transactionRepo AtomicTransactionRepository
 }
 
-// NewTransactionController configures and returns a Service.
-func NewTransactionController(
+// NewTransactionService configures and returns a Service.
+func NewTransactionService(
 	logger logger,
 	bankAccountRepo AtomicBankAccountRepository,
 	transactionRepo AtomicTransactionRepository,
-) *TransactionController {
-	return &TransactionController{
+) *TransactionService {
+	return &TransactionService{
 		logger:          logger,
 		bankAccountRepo: bankAccountRepo,
 		transactionRepo: transactionRepo,
@@ -62,7 +62,7 @@ func NewTransactionController(
 // bank account has insufficient funds to settle all transactions, none are
 // applied. Otherwise, the bank balance is updated and the transactions are
 // persisted.
-func (tc *TransactionController) BulkTransaction(ctx context.Context, bt BulkTransaction) error {
+func (tc *TransactionService) BulkTransaction(ctx context.Context, bt BulkTransaction) error {
 	tx, err := tc.bankAccountRepo.BeginSerializableTx(ctx)
 	if err != nil {
 		return fmt.Errorf("tc.repo.BeginTx: %w", err)

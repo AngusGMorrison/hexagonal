@@ -8,7 +8,7 @@ import (
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/rest"
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 )
 
 func main() {
@@ -48,11 +48,11 @@ func run(logger *log.Logger) error {
 		return fmt.Errorf("create TransactionRepository: %w", err)
 	}
 
-	transactionController := controller.NewTransactionController(
+	transactionService := service.NewTransactionService(
 		logger, bankAccountRepo, transactionRepo)
 
 	// Inject the dependencies into the server.
-	server := rest.NewServer(logger, envConfig, transactionController)
+	server := rest.NewServer(logger, envConfig, transactionService)
 
 	return server.Run()
 }

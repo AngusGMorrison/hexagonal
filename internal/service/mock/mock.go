@@ -1,14 +1,14 @@
-// Package mock provides mock implementations of controller interfaces.
+// Package mock provides mock implementations of service interfaces.
 package mock
 
 import (
 	"context"
 
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/stretchr/testify/mock"
 )
 
-// Transactor satisfies controller.Transactor.
+// Transactor satisfies service.Transactor.
 type Transactor struct {
 	mock.Mock
 }
@@ -27,16 +27,16 @@ func (t *Transactor) Rollback() error {
 	return args.Error(0)
 }
 
-// AtomicTransferRepository satisfies controller.AtomicTransferRepository.
+// AtomicTransferRepository satisfies service.AtomicTransferRepository.
 type AtomicTransferRepository struct {
 	mock.Mock
 }
 
-// BeginSerializableTx returns the controller.Transactor and error passed to the
+// BeginSerializableTx returns the service.Transactor and error passed to the
 // mock.
 func (atr *AtomicTransferRepository) BeginSerializableTx(
 	ctx context.Context,
-) (controller.Transactor, error) {
+) (service.Transactor, error) {
 	args := atr.Called(ctx)
 
 	tx := args.Get(0).(*Transactor)
@@ -44,16 +44,16 @@ func (atr *AtomicTransferRepository) BeginSerializableTx(
 	return tx, args.Error(1)
 }
 
-// GetBankAccountByIBAN returns the controller.BankAccount and error passed to
+// GetBankAccountByIBAN returns the service.BankAccount and error passed to
 // the mock.
 func (atr *AtomicTransferRepository) GetBankAccountByIBAN(
 	ctx context.Context,
-	tx controller.Transactor,
+	tx service.Transactor,
 	iban string,
-) (controller.BankAccount, error) {
+) (service.BankAccount, error) {
 	args := atr.Called(ctx, tx, iban)
 
-	bankAccount := args.Get(0).(controller.BankAccount)
+	bankAccount := args.Get(0).(service.BankAccount)
 
 	return bankAccount, args.Error(1)
 }
@@ -61,8 +61,8 @@ func (atr *AtomicTransferRepository) GetBankAccountByIBAN(
 // UpdateBankAccount returns the error passed to the mock.
 func (atr *AtomicTransferRepository) UpdateBankAccount(
 	ctx context.Context,
-	tx controller.Transactor,
-	ba controller.BankAccount,
+	tx service.Transactor,
+	ba service.BankAccount,
 ) error {
 	args := atr.Called(ctx, tx, ba)
 
@@ -72,8 +72,8 @@ func (atr *AtomicTransferRepository) UpdateBankAccount(
 // SaveCreditTransfers returns the error passed to the mock.
 func (atr *AtomicTransferRepository) SaveCreditTransfers(
 	ctx context.Context,
-	tx controller.Transactor,
-	transfers controller.Transactions,
+	tx service.Transactor,
+	transfers service.Transactions,
 ) error {
 	args := atr.Called(ctx, tx, transfers)
 

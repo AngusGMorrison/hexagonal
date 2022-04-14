@@ -15,7 +15,7 @@ import (
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
 	restmock "github.com/angusgmorrison/hexagonal/internal/adapter/rest/mock"
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -68,8 +68,8 @@ func TestHandleBulkTransfer_BadRequest(t *testing.T) {
 			t.Parallel()
 
 			var (
-				transactionController = restmock.TransactionController{}
-				server                = NewServer(logger, defaultConfig(), &transactionController)
+				transactionService = restmock.TransactionService{}
+				server             = NewServer(logger, defaultConfig(), &transactionService)
 			)
 
 			fixturePath := filepath.Join("testdata", tc.fixtureFilename)
@@ -100,19 +100,19 @@ func TestHandleBulkTransfer_ValidRequest(t *testing.T) {
 	testCases := []struct {
 		name            string
 		fixtureFilename string
-		controllerErr   error
+		serviceErr      error
 		statusCode      int
 	}{
 		{
 			name:            "201 created",
 			fixtureFilename: "bulk_transfer_request.json",
-			controllerErr:   nil,
+			serviceErr:      nil,
 			statusCode:      http.StatusCreated,
 		},
 		{
 			name:            "422 unprocessable entity",
 			fixtureFilename: "bulk_transfer_request.json",
-			controllerErr:   controller.ErrInsufficientFunds,
+			serviceErr:      service.ErrInsufficientFunds,
 			statusCode:      http.StatusUnprocessableEntity,
 		},
 	}
@@ -124,8 +124,8 @@ func TestHandleBulkTransfer_ValidRequest(t *testing.T) {
 			t.Parallel()
 
 			var (
-				transactionController = restmock.TransactionController{}
-				server                = NewServer(logger, defaultConfig(), &transactionController)
+				transactionService = restmock.TransactionService{}
+				server             = NewServer(logger, defaultConfig(), &transactionService)
 			)
 
 			fixturePath := filepath.Join("testdata", tc.fixtureFilename)
@@ -152,15 +152,15 @@ func TestHandleBulkTransfer_ValidRequest(t *testing.T) {
 				},
 			}
 
-			transactionController.On(
+			transactionService.On(
 				"BulkTransaction",
 				mock.AnythingOfType("*gin.Context"),
 				expectedBTR.toDomain(),
-			).Return(tc.controllerErr)
+			).Return(tc.serviceErr)
 
 			server.ServeHTTP(w, r)
 
-			transactionController.AssertExpectations(t)
+			transactionService.AssertExpectations(t)
 
 			body, err := ioutil.ReadAll(w.Body)
 			require.NoError(err)

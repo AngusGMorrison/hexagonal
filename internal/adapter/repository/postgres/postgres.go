@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/jmoiron/sqlx"
 
 	// Load postgres driver
@@ -128,12 +128,12 @@ func (u UnpermittedTruncationError) Error() string {
 	return fmt.Sprintf("truncation not permitted in environment %q", u.env)
 }
 
-// TxTypeError represents a failed conversion from a controller.Transactor
+// TxTypeError represents a failed conversion from a service.Transactor
 // interface to an *sqlx.Tx.
 type TxTypeError struct {
-	tx controller.Transactor
+	tx service.Transactor
 }
 
 func (t TxTypeError) Error() string {
-	return fmt.Sprintf("controller.Transactor with concrete type *sqlx.Tx required; got %T", t.tx)
+	return fmt.Sprintf("service.Transactor with concrete type *sqlx.Tx required; got %T", t.tx)
 }

@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -133,7 +133,7 @@ func TestBulkTransfer(t *testing.T) {
 
 		assert.EqualValues(3, transactionCount, "transactions created")
 
-		expectedTransaction := controller.Transaction{
+		expectedTransaction := service.Transaction{
 			BankAccountID:    expectedBankAccount.ID,
 			CounterpartyName: "Bip Bip",
 			CounterpartyIBAN: "EE383680981021245685",
@@ -157,8 +157,8 @@ func TestBulkTransfer(t *testing.T) {
 	})
 }
 
-func defaultBankAccount() controller.BankAccount {
-	return controller.BankAccount{
+func defaultBankAccount() service.BankAccount {
+	return service.BankAccount{
 		OrganizationName: "ACME Corp",
 		OrganizationBIC:  "OIVUSCLQXXX",
 		OrganizationIBAN: "FR10474608000002006107XXXXX",

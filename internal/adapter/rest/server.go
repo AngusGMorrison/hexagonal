@@ -27,16 +27,16 @@ type Server struct {
 	// multiple concurrent sources, e.g. server errors and OS interrupts.
 	errorStream chan error
 
-	// Controllers are the interfaces by which handlers communicate requests to
+	// Services are the interfaces by which handlers communicate requests to
 	// business logic.
-	transactionController TransactionController
+	transactionService TransactionService
 }
 
 // NewServer returns a new hexagonal server configured using the provided Config.
 func NewServer(
 	logger *log.Logger,
 	envConfig envconfig.EnvConfig,
-	transactionController TransactionController,
+	transactionService TransactionService,
 ) *Server {
 	server := Server{
 		config: envConfig,
@@ -46,8 +46,8 @@ func NewServer(
 			ReadTimeout:  envConfig.HTTP.ReadTimeout,
 			WriteTimeout: envConfig.HTTP.WriteTimeout,
 		},
-		errorStream:           make(chan error, 1),
-		transactionController: transactionController,
+		errorStream:        make(chan error, 1),
+		transactionService: transactionService,
 	}
 
 	server.setupRoutes()

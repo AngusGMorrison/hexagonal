@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -14,7 +14,7 @@ import (
 // Transaction.
 type Transactions []Transaction
 
-func transactionsFromDomain(ct []controller.Transaction) Transactions {
+func transactionsFromDomain(ct []service.Transaction) Transactions {
 	transactions := make(Transactions, 0, len(ct))
 
 	for _, t := range ct {
@@ -24,8 +24,8 @@ func transactionsFromDomain(ct []controller.Transaction) Transactions {
 	return transactions
 }
 
-func (ts Transactions) toDomain() controller.Transactions {
-	cts := make(controller.Transactions, 0, len(ts))
+func (ts Transactions) toDomain() service.Transactions {
+	cts := make(service.Transactions, 0, len(ts))
 
 	for _, t := range ts {
 		cts = append(cts, t.toDomain())
@@ -46,7 +46,7 @@ type Transaction struct {
 	Description      string `db:"description"`
 }
 
-func transactionFromDomain(ct controller.Transaction) Transaction {
+func transactionFromDomain(ct service.Transaction) Transaction {
 	return Transaction{
 		ID:               ct.ID,
 		BankAccountID:    ct.BankAccountID,
@@ -59,8 +59,8 @@ func transactionFromDomain(ct controller.Transaction) Transaction {
 	}
 }
 
-func (t Transaction) toDomain() controller.Transaction {
-	return controller.Transaction{
+func (t Transaction) toDomain() service.Transaction {
+	return service.Transaction{
 		ID:               t.ID,
 		BankAccountID:    t.BankAccountID,
 		CounterpartyName: t.CounterpartyName,
@@ -73,15 +73,15 @@ func (t Transaction) toDomain() controller.Transaction {
 }
 
 // TransactionRepository provides the methods necessary to perform transfers.
-// Satisfies controller.AtomicTransferRepository.
+// Satisfies service.AtomicTransferRepository.
 type TransactionRepository struct {
 	db        *DB
 	appConfig envconfig.App
 	queries   Queries
 }
 
-// Statically verify controller interface compliance.
-var _ controller.AtomicTransactionRepository = (*TransactionRepository)(nil)
+// Statically verify service interface compliance.
+var _ service.AtomicTransactionRepository = (*TransactionRepository)(nil)
 
 const (
 	_countTransactions                    QueryFilename = "count_transactions.sql"
@@ -108,8 +108,8 @@ func NewTransactionRepository(db *DB, appConfig envconfig.App) (*TransactionRepo
 // BulkInsertTx bulk inserts transactions atomically.
 func (tr *TransactionRepository) BulkInsertTx(
 	ctx context.Context,
-	transactor controller.Transactor,
-	transactions controller.Transactions,
+	transactor service.Transactor,
+	transactions service.Transactions,
 ) error {
 	tx, ok := transactor.(*sqlx.Tx)
 	if !ok {
@@ -145,7 +145,7 @@ func (tr *TransactionRepository) Count(ctx context.Context) (int64, error) {
 func (tr *TransactionRepository) SelectByCounterpartyName(
 	ctx context.Context,
 	name string,
-) (controller.Transactions, error) {
+) (service.Transactions, error) {
 	var rows Transactions
 
 	if err := tr.db.Select(ctx, &rows, tr.queries[_selectTransactionsByCounterpartyName], name); err != nil {

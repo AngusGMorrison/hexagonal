@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -20,7 +20,7 @@ type BankAccount struct {
 	BIC              string `db:"bic"`
 }
 
-func bankAccountFromDomain(cba controller.BankAccount) BankAccount {
+func bankAccountFromDomain(cba service.BankAccount) BankAccount {
 	return BankAccount{
 		ID:               cba.ID,
 		OrganizationName: cba.OrganizationName,
@@ -30,8 +30,8 @@ func bankAccountFromDomain(cba controller.BankAccount) BankAccount {
 	}
 }
 
-func (ba BankAccount) toDomain() controller.BankAccount {
-	return controller.BankAccount{
+func (ba BankAccount) toDomain() service.BankAccount {
+	return service.BankAccount{
 		ID:               ba.ID,
 		OrganizationName: ba.OrganizationName,
 		OrganizationIBAN: ba.IBAN,
@@ -47,8 +47,8 @@ type BankAccountRepository struct {
 	queries   Queries
 }
 
-// Statically verify that Repository satisfies controller.Repository.
-var _ controller.AtomicBankAccountRepository = (*BankAccountRepository)(nil)
+// Statically verify that Repository satisfies service.Repository.
+var _ service.AtomicBankAccountRepository = (*BankAccountRepository)(nil)
 
 const (
 	_countBankAccounts     QueryFilename = "count_bank_accounts.sql"
@@ -75,11 +75,11 @@ func NewBankAccountRepository(db *DB, appConfig envconfig.App) (*BankAccountRepo
 }
 
 // BeginSerializableTx starts a new sqlx transaction with isolation level
-// Serializable and returns it as a controller.Transactor for use in atomic
+// Serializable and returns it as a service.Transactor for use in atomic
 // repository operations.
 func (bar *BankAccountRepository) BeginSerializableTx(
 	ctx context.Context,
-) (controller.Transactor, error) {
+) (service.Transactor, error) {
 	tx, err := bar.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return nil, fmt.Errorf("BeginSerializableTx: %w", err)
@@ -92,12 +92,12 @@ func (bar *BankAccountRepository) BeginSerializableTx(
 // transactor. If there is no matching bank account, an error is returned.
 func (bar *BankAccountRepository) FindByIBANTx(
 	ctx context.Context,
-	transactor controller.Transactor,
+	transactor service.Transactor,
 	iban string,
-) (controller.BankAccount, error) {
+) (service.BankAccount, error) {
 	tx, ok := transactor.(*sqlx.Tx)
 	if !ok {
-		return controller.BankAccount{}, TxTypeError{tx: tx}
+		return service.BankAccount{}, TxTypeError{tx: tx}
 	}
 
 	var row BankAccount
@@ -108,7 +108,7 @@ func (bar *BankAccountRepository) FindByIBANTx(
 		bar.queries[_findBankAccountByIBAN],
 		iban,
 	); err != nil {
-		return controller.BankAccount{}, fmt.Errorf("get bank account with IBAN %q: %w",
+		return service.BankAccount{}, fmt.Errorf("get bank account with IBAN %q: %w",
 			iban, err)
 	}
 
@@ -118,8 +118,8 @@ func (bar *BankAccountRepository) FindByIBANTx(
 // UpdateTx updates the bank account by ID using the transactor provided.
 func (bar *BankAccountRepository) UpdateTx(
 	ctx context.Context,
-	transactor controller.Transactor,
-	ba controller.BankAccount,
+	transactor service.Transactor,
+	ba service.BankAccount,
 ) error {
 	tx, ok := transactor.(*sqlx.Tx)
 	if !ok {
@@ -143,8 +143,8 @@ func (bar *BankAccountRepository) UpdateTx(
 // account.
 func (bar *BankAccountRepository) Insert(
 	ctx context.Context,
-	ba controller.BankAccount,
-) (controller.BankAccount, error) {
+	ba service.BankAccount,
+) (service.BankAccount, error) {
 	row := bankAccountFromDomain(ba)
 
 	query, args, err := bar.db.BindNamed(bar.queries[_insertBankAccounts], row)
@@ -173,7 +173,7 @@ func (bar *BankAccountRepository) Count(ctx context.Context) (int64, error) {
 func (bar *BankAccountRepository) FindByID(
 	ctx context.Context,
 	id int64,
-) (controller.BankAccount, error) {
+) (service.BankAccount, error) {
 	var row BankAccount
 
 	if err := bar.db.Get(
@@ -182,7 +182,7 @@ func (bar *BankAccountRepository) FindByID(
 		bar.queries[_findBankAccountByID],
 		id,
 	); err != nil {
-		return controller.BankAccount{}, fmt.Errorf("get bank account with ID %d: %w",
+		return service.BankAccount{}, fmt.Errorf("get bank account with ID %d: %w",
 			id, err)
 	}
 

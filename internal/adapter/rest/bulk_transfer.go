@@ -5,19 +5,19 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
-// TransactionController describes the methods a handler expects to call to
-// transfers. Using an interface allows us to mock controllers when
-// testing. This interface should follow the concrete controller type.
-type TransactionController interface {
-	BulkTransaction(ctx context.Context, bt controller.BulkTransaction) error
+// TransactionService describes the methods a handler expects to call to perform
+// transfers. Using an interface allows us to mock services when
+// testing. This interface should follow the concrete service type.
+type TransactionService interface {
+	BulkTransaction(ctx context.Context, bt service.BulkTransaction) error
 }
 
 // Statically verify that the interface and concrete type remain in sync.
-var _ TransactionController = (*controller.TransactionController)(nil)
+var _ TransactionService = (*service.TransactionService)(nil)
 
 // bulkTransferRequest represents an incoming bulk transfer payload.
 type bulkTransferRequest struct {
@@ -27,9 +27,9 @@ type bulkTransferRequest struct {
 	CreditTransfers  creditTransfers `json:"credit_transfers" binding:"min=1"`
 }
 
-func (btr bulkTransferRequest) toDomain() controller.BulkTransaction {
-	bt := controller.BulkTransaction{
-		Account: controller.BankAccount{
+func (btr bulkTransferRequest) toDomain() service.BulkTransaction {
+	bt := service.BulkTransaction{
+		Account: service.BankAccount{
 			OrganizationName: btr.OrganizationName,
 			OrganizationBIC:  btr.OrganizationBIC,
 			OrganizationIBAN: btr.OrganizationIBAN,
@@ -42,8 +42,8 @@ func (btr bulkTransferRequest) toDomain() controller.BulkTransaction {
 
 type creditTransfers []creditTransfer
 
-func (cts creditTransfers) toDomain() controller.Transactions {
-	transactions := make(controller.Transactions, 0, len(cts))
+func (cts creditTransfers) toDomain() service.Transactions {
+	transactions := make(service.Transactions, 0, len(cts))
 
 	for _, transfer := range cts {
 		transactions = append(transactions, transfer.toDomain())
@@ -61,8 +61,8 @@ type creditTransfer struct {
 	Description      string      `json:"description" binding:"required"`
 }
 
-func (ct creditTransfer) toDomain() controller.Transaction {
-	return controller.Transaction{
+func (ct creditTransfer) toDomain() service.Transaction {
+	return service.Transaction{
 		AmountCents:      ct.amountCents(),
 		Currency:         ct.Currency,
 		CounterpartyName: ct.CounterpartyName,
@@ -91,7 +91,7 @@ func (s *Server) handleCreateBulkTransfer() gin.HandlerFunc {
 			return
 		}
 
-		if err := s.transactionController.BulkTransaction(c, btr.toDomain()); err != nil {
+		if err := s.transactionService.BulkTransaction(c, btr.toDomain()); err != nil {
 			s.logger.Printf("Bulk transfer failed: %s", err)
 			c.AbortWithStatus(http.StatusUnprocessableEntity)
 

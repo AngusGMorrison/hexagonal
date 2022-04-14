@@ -4,19 +4,19 @@ package mock
 import (
 	"context"
 
-	"github.com/angusgmorrison/hexagonal/internal/controller"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/stretchr/testify/mock"
 )
 
-// TransactionController satisfies rest.TransactionController.
-type TransactionController struct {
+// TransactionService satisfies rest.TransactionService.
+type TransactionService struct {
 	mock.Mock
 }
 
 // BulkTransaction returns the error passed to the mock.
-func (tc *TransactionController) BulkTransaction(
+func (tc *TransactionService) BulkTransaction(
 	ctx context.Context,
-	bt controller.BulkTransaction,
+	bt service.BulkTransaction,
 ) error {
 	args := tc.Called(ctx, bt)
 
