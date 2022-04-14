@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/angusgmorrison/hexagonal/internal/service"
+	"github.com/angusgmorrison/hexagonal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,7 +44,7 @@ func TestBulkTransfer(t *testing.T) {
 			assert.NoError(err, "truncateTransactions")
 		}()
 
-		fixturePath := filepath.Join("..", "..", "fixtures", "requests", "422_insufficient_funds.json")
+		fixturePath := filepath.Join("..", "fixtures", "requests", "422_insufficient_funds.json")
 		fixtureBytes, err := ioutil.ReadFile(fixturePath)
 		require.NoError(err, "read fixture file")
 
@@ -99,7 +99,7 @@ func TestBulkTransfer(t *testing.T) {
 			assert.NoError(err, "ttransactionRepo.Truncate")
 		}()
 
-		fixturePath := filepath.Join("..", "..", "fixtures", "requests", "201_created.json")
+		fixturePath := filepath.Join("..", "fixtures", "requests", "201_created.json")
 		fixtureBytes, err := ioutil.ReadFile(fixturePath)
 		require.NoError(err, "read fixture file")
 

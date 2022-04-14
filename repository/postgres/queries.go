@@ -11,7 +11,7 @@ import (
 // relative to the running binary, so this should be joined to an absolute path
 // representing the application root before use.
 func RelativeQueryDir() string {
-	return filepath.Join("internal", "adapter", "repository", "postgres", "query")
+	return filepath.Join("repository", "postgres", "query")
 }
 
 // QueryFilename represents the filename of an PostgreSQL query file.

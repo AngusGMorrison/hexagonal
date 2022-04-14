@@ -7,8 +7,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
+	"github.com/angusgmorrison/hexagonal/envconfig"
+	"github.com/angusgmorrison/hexagonal/repository/postgres"
 )
 
 type infrastructure struct {

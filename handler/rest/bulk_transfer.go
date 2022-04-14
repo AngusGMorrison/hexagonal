@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/angusgmorrison/hexagonal/internal/service"
+	"github.com/angusgmorrison/hexagonal/service"
 	"github.com/gin-gonic/gin"
 )
 

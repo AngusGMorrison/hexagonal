@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
-	"github.com/angusgmorrison/hexagonal/internal/adapter/rest"
-	"github.com/angusgmorrison/hexagonal/internal/service"
+	"github.com/angusgmorrison/hexagonal/envconfig"
+	"github.com/angusgmorrison/hexagonal/handler/rest"
+	"github.com/angusgmorrison/hexagonal/repository/postgres"
+	"github.com/angusgmorrison/hexagonal/service"
 )
 
 func main() {
