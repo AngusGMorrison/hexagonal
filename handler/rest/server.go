@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
+	"github.com/angusgmorrison/hexagonal/envconfig"
 )
 
 // Server provides HTTP routing and handler dependencies.

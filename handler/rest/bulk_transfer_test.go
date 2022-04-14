@@ -13,9 +13,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	restmock "github.com/angusgmorrison/hexagonal/internal/adapter/rest/mock"
-	"github.com/angusgmorrison/hexagonal/internal/service"
+	"github.com/angusgmorrison/hexagonal/envconfig"
+	restmock "github.com/angusgmorrison/hexagonal/handler/rest/mock"
+	"github.com/angusgmorrison/hexagonal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

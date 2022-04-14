@@ -4,7 +4,7 @@ package mock
 import (
 	"context"
 
-	"github.com/angusgmorrison/hexagonal/internal/service"
+	"github.com/angusgmorrison/hexagonal/service"
 	"github.com/stretchr/testify/mock"
 )
 

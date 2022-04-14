@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/service"
+	"github.com/angusgmorrison/hexagonal/envconfig"
+	"github.com/angusgmorrison/hexagonal/service"
 	"github.com/jmoiron/sqlx"
 
 	// Load postgres driver

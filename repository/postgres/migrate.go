@@ -50,7 +50,7 @@ func Migrate(databaseURL, migrationPath string, logger *log.Logger, config Migra
 // relative to the running binary (e.g. during tests), so it should be joined
 // into an absolute path before use.
 func RelativeMigrationDir() string {
-	return filepath.Join("internal", "adapter", "repository", "postgres", "migration")
+	return filepath.Join("repository", "postgres", "migration")
 }
 
 type migrator struct {
