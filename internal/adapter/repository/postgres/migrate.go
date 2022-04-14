@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
 
 	"github.com/golang-migrate/migrate/v4"
 	// Register the postgres driver.
@@ -11,8 +12,6 @@ import (
 	// Register the file source.
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
-
-const _migrationPath = "file://migrations"
 
 // MigrateConfig is a configuration object for migrations.
 type MigrateConfig struct {
@@ -28,8 +27,9 @@ type MigrateConfig struct {
 }
 
 // Migrate triggers a migration on the database using the specified Config.
-func Migrate(databaseURL string, logger *log.Logger, config MigrateConfig) error {
-	migrator, err := newMigrator(databaseURL, logger, config)
+func Migrate(databaseURL, migrationPath string, logger *log.Logger, config MigrateConfig) error {
+	fmt.Println(migrationPath)
+	migrator, err := newMigrator(databaseURL, migrationPath, logger, config)
 	if err != nil {
 		return err
 	}
@@ -45,14 +45,24 @@ func Migrate(databaseURL string, logger *log.Logger, config MigrateConfig) error
 	return migrator.up()
 }
 
+// RelativeMigrationDir returns the path to the migration directory relative to
+// the application root folder. This is not necessarily the same as the path
+// relative to the running binary (e.g. during tests), so it should be joined
+// into an absolute path before use.
+func RelativeMigrationDir() string {
+	return filepath.Join("internal", "adapter", "repository", "postgres", "migration")
+}
+
 type migrator struct {
 	migrate *migrate.Migrate
 	logger  *log.Logger
 	config  MigrateConfig
 }
 
-func newMigrator(databaseURL string, logger *log.Logger, config MigrateConfig) (*migrator, error) {
-	inner, err := migrate.New(_migrationPath, databaseURL)
+func newMigrator(databaseURL, migrationPath string, logger *log.Logger, config MigrateConfig) (*migrator, error) {
+	pathWithScheme := filepath.Join("file://", migrationPath)
+
+	inner, err := migrate.New(pathWithScheme, databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("create new migrator: %w", err)
 	}

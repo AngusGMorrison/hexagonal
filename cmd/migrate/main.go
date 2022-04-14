@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/adapter/repository/postgres"
@@ -38,7 +39,9 @@ func run(logger *log.Logger) error {
 		Verbose:      *verbose,
 	}
 
-	if err := postgres.Migrate(env.DB.URL(), logger, config); err != nil {
+	migrationPath := filepath.Join(env.App.Root, postgres.RelativeMigrationDir())
+
+	if err := postgres.Migrate(env.DB.URL(), migrationPath, logger, config); err != nil {
 		return fmt.Errorf("trigger migration: %w", err)
 	}
 

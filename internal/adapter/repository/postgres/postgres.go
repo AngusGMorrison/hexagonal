@@ -6,14 +6,17 @@ import (
 	"fmt"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
+	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/jmoiron/sqlx"
 
 	// Load postgres driver
 	_ "github.com/lib/pq"
 )
 
-// DB wraps a config object and a *sqlx.DB, allowing us to write our own methods
-// on the database struct.
+// DB is a thin wrapper around an *sqlx.DB, allowing us to write our own methods
+// on the database struct, expose only the methods required by our repositories
+// and enforce conventions, such as always requiring a context to be passed when
+// querying the DB.
 type DB struct {
 	config envconfig.DB
 	sqlxDB *sqlx.DB
@@ -21,37 +24,24 @@ type DB struct {
 
 // NewDB returns a configured Postgres database that is ready to use, or an
 // error if the connection can't be established.
-func NewDB(cfg envconfig.DB) (*DB, error) {
-	sqlxDB, err := sqlx.Open("postgres", cfg.URL())
+func NewDB(dbConfig envconfig.DB) (*DB, error) {
+	sqlxDB, err := sqlx.Open("postgres", dbConfig.URL())
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
 
 	db := DB{
-		config: cfg,
+		config: dbConfig,
 		sqlxDB: sqlxDB,
 	}
 
-	db.sqlxDB.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
-	db.sqlxDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
-	db.sqlxDB.SetMaxIdleConns(cfg.MaxIdleConns)
-	db.sqlxDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	db.configureConns()
 
 	if err := db.ping(); err != nil {
 		return nil, err
 	}
 
 	return &db, nil
-}
-
-// BeginTxx starts and returns a new sqlx transaction.
-func (db *DB) BeginTxx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
-	tx, err := db.sqlxDB.BeginTxx(ctx, opts)
-	if err != nil {
-		return nil, fmt.Errorf("BeginTxx: %w", err)
-	}
-
-	return tx, nil
 }
 
 // BindNamed binds a named query, replacing its named arguments with Postgres
@@ -63,23 +53,23 @@ func (db *DB) BindNamed(query string, arg any) (string, []any, error) {
 
 // Get a single row, scanning the result into dest. Placeholder parameters are
 // replaced with supplied args.
-func (db *DB) Get(dest any, query string, args ...any) error {
-	return db.sqlxDB.Get(dest, query, args...)
+func (db *DB) Get(ctx context.Context, dest any, query string, args ...any) error {
+	return db.sqlxDB.GetContext(ctx, dest, query, args...)
 }
 
 // Select executes the query and scans each row into dest, which must be slice.
-func (db *DB) Select(dest any, query string, args ...any) error {
-	return db.sqlxDB.Select(dest, query, args...)
+func (db *DB) Select(ctx context.Context, dest any, query string, args ...any) error {
+	return db.sqlxDB.SelectContext(ctx, dest, query, args...)
 }
 
 // Exec executes the query and returns the result.
-func (db *DB) Exec(query string, args ...any) (sql.Result, error) {
-	return db.sqlxDB.Exec(query, args...)
+func (db *DB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return db.sqlxDB.ExecContext(ctx, query, args...)
 }
 
 // NamedExec executes a query, replaced named arguments with fields from arg.
-func (db *DB) NamedExec(query string, arg any) (sql.Result, error) {
-	return db.sqlxDB.NamedExec(query, arg)
+func (db *DB) NamedExec(ctx context.Context, query string, arg any) (sql.Result, error) {
+	return db.sqlxDB.NamedExecContext(ctx, query, arg)
 }
 
 // LoadFile loads an entire SQL file into memory and executes it.
@@ -96,6 +86,23 @@ func (db *DB) Close() error {
 	return nil
 }
 
+// BeginTx returns a new database transaction.
+func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
+	tx, err := db.sqlxDB.BeginTxx(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("beginTx: %w", err)
+	}
+
+	return tx, nil
+}
+
+func (db *DB) configureConns() {
+	db.sqlxDB.SetConnMaxIdleTime(db.config.ConnMaxIdleTime)
+	db.sqlxDB.SetConnMaxLifetime(db.config.ConnMaxLifetime)
+	db.sqlxDB.SetMaxIdleConns(db.config.MaxIdleConns)
+	db.sqlxDB.SetMaxOpenConns(db.config.MaxOpenConns)
+}
+
 func (db *DB) ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), db.config.ConnTimeout)
 	defer cancel()
@@ -105,4 +112,28 @@ func (db *DB) ping() error {
 	}
 
 	return nil
+}
+
+func truncationPermitted(env string) bool {
+	return env == "development" || env == "test"
+}
+
+// UnpermittedTruncationError is used to signal a truncation attempt in an
+// environment which does not support it.
+type UnpermittedTruncationError struct {
+	env string
+}
+
+func (u UnpermittedTruncationError) Error() string {
+	return fmt.Sprintf("truncation not permitted in environment %q", u.env)
+}
+
+// TxTypeError represents a failed conversion from a service.Transactor
+// interface to an *sqlx.Tx.
+type TxTypeError struct {
+	tx service.Transactor
+}
+
+func (t TxTypeError) Error() string {
+	return fmt.Sprintf("service.Transactor with concrete type *sqlx.Tx required; got %T", t.tx)
 }

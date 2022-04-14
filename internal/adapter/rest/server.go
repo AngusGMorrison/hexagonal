@@ -11,8 +11,6 @@ import (
 	"syscall"
 
 	"github.com/angusgmorrison/hexagonal/internal/adapter/envconfig"
-	"github.com/angusgmorrison/hexagonal/internal/controller"
-	"github.com/gin-gonic/gin"
 )
 
 // Server provides HTTP routing and handler dependencies.
@@ -29,19 +27,17 @@ type Server struct {
 	// multiple concurrent sources, e.g. server errors and OS interrupts.
 	errorStream chan error
 
-	// services are the structures by which handlers communicate requests to
+	// Services are the interfaces by which handlers communicate requests to
 	// business logic.
-	transferController *controller.TransferController
+	transactionService TransactionService
 }
 
 // NewServer returns a new hexagonal server configured using the provided Config.
 func NewServer(
 	logger *log.Logger,
 	envConfig envconfig.EnvConfig,
-	transferController *controller.TransferController,
+	transactionService TransactionService,
 ) *Server {
-	gin.SetMode(envConfig.App.GinMode)
-
 	server := Server{
 		config: envConfig,
 		logger: logger,
@@ -51,7 +47,7 @@ func NewServer(
 			WriteTimeout: envConfig.HTTP.WriteTimeout,
 		},
 		errorStream:        make(chan error, 1),
-		transferController: transferController,
+		transactionService: transactionService,
 	}
 
 	server.setupRoutes()

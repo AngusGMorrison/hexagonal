@@ -1,0 +1,15 @@
+{
+  "organization_name": "",
+  "organization_bic": "OIVUSCLQXXX",
+  "organization_iban": "FR10474608000002006107XXXXX",
+  "credit_transfers": [
+    {
+      "amount": "23.17",
+      "currency": "EUR",
+      "counterparty_name": "Bip Bip",
+      "counterparty_bic": "CRLYFRPPTOU",
+      "counterparty_iban": "EE383680981021245685",
+      "description": "Neverland/6318"
+    }
+  ]
+}
