@@ -37,6 +37,17 @@ type logger interface {
 	Printf(format string, args ...any)
 }
 
+type AtomicRepository interface {
+	BeginSerializableTx(ctx context.Context) (Transactor, error)
+}
+
+type BulkTransactionRepository interface {
+	AtomicRepository
+
+	LoadBankAccountFromIBAN(ctx context.Context, tx Transactor, bt BulkTransaction) (BulkTransaction, error)
+	Save(ctx context.Context, tx Transactor, bt BulkTransaction) (BulkTransaction, error)
+}
+
 // TransactionService provides the fields and methods required to perform bulk
 // transfers.
 type TransactionService struct {

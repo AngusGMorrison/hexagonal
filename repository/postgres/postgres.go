@@ -44,32 +44,23 @@ func NewDB(dbConfig envconfig.DB) (*DB, error) {
 	return &db, nil
 }
 
-// BindNamed binds a named query, replacing its named arguments with Postgres
-// positional bindvars and producing a slice of args in the correct binding
-// order.
-func (db *DB) BindNamed(query string, arg any) (string, []any, error) {
-	return db.sqlxDB.BindNamed(query, arg)
-}
-
-// Get a single row, scanning the result into dest. Placeholder parameters are
-// replaced with supplied args.
-func (db *DB) Get(ctx context.Context, dest any, query string, args ...any) error {
-	return db.sqlxDB.GetContext(ctx, dest, query, args...)
-}
-
 // Select executes the query and scans each row into dest, which must be slice.
 func (db *DB) Select(ctx context.Context, dest any, query string, args ...any) error {
-	return db.sqlxDB.SelectContext(ctx, dest, query, args...)
+	if err := db.sqlxDB.SelectContext(ctx, dest, query, args...); err != nil {
+		return fmt.Errorf("db.Select: %w", err)
+	}
+
+	return nil
 }
 
-// Exec executes the query and returns the result.
-func (db *DB) Exec(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	return db.sqlxDB.ExecContext(ctx, query, args...)
-}
+// Execute executes a query that returns no result.
+func (db *DB) Execute(ctx context.Context, query string, args ...any) error {
+	_, err := db.sqlxDB.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("db.Execute: %w", err)
+	}
 
-// NamedExec executes a query, replaced named arguments with fields from arg.
-func (db *DB) NamedExec(ctx context.Context, query string, arg any) (sql.Result, error) {
-	return db.sqlxDB.NamedExecContext(ctx, query, arg)
+	return nil
 }
 
 // LoadFile loads an entire SQL file into memory and executes it.
@@ -87,13 +78,62 @@ func (db *DB) Close() error {
 }
 
 // BeginTx returns a new database transaction.
-func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sqlx.Tx, error) {
-	tx, err := db.sqlxDB.BeginTxx(ctx, opts)
+func (db *DB) BeginSerializableTx(ctx context.Context) (*Tx, error) {
+	sqlxTx, err := db.sqlxDB.BeginTxx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return nil, fmt.Errorf("beginTx: %w", err)
 	}
 
-	return tx, nil
+	return &Tx{sqlxTx: sqlxTx}, nil
+}
+
+// BeginTx returns a new database transaction.
+func (db *DB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
+	sqlxTx, err := db.sqlxDB.BeginTxx(ctx, opts)
+	if err != nil {
+		return nil, fmt.Errorf("beginTx: %w", err)
+	}
+
+	return &Tx{sqlxTx: sqlxTx}, nil
+}
+
+type Tx struct {
+	sqlxTx *sqlx.Tx
+}
+
+func (t *Tx) Commit() error {
+	if err := t.sqlxTx.Commit(); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (t *Tx) Rollback() error {
+	if err := t.sqlxTx.Rollback(); err != nil {
+		return fmt.Errorf("roll back transaction: %w", err)
+	}
+
+	return nil
+}
+
+// Select executes the query and scans each row into dest, which must be slice.
+func (tx *Tx) Select(ctx context.Context, dest any, query string, args ...any) error {
+	if err := tx.sqlxTx.SelectContext(ctx, dest, query, args...); err != nil {
+		return fmt.Errorf("tx.Select: %w", err)
+	}
+
+	return nil
+}
+
+// Execute executes a query that returns no result.
+func (tx *Tx) Execute(ctx context.Context, query string, args ...any) error {
+	_, err := tx.sqlxTx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("tx.Execute: %w", err)
+	}
+
+	return nil
 }
 
 func (db *DB) configureConns() {
@@ -114,22 +154,6 @@ func (db *DB) ping() error {
 	return nil
 }
 
-func truncationPermitted(env string) bool {
-	return env == "development" || env == "test"
-}
-
-// UnpermittedTruncationError is used to signal a truncation attempt in an
-// environment which does not support it.
-type UnpermittedTruncationError struct {
-	env string
-}
-
-func (u UnpermittedTruncationError) Error() string {
-	return fmt.Sprintf("truncation not permitted in environment %q", u.env)
-}
-
-// TxTypeError represents a failed conversion from a service.Transactor
-// interface to an *sqlx.Tx.
 type TxTypeError struct {
 	tx service.Transactor
 }
