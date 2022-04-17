@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/angusgmorrison/hexagonal/envconfig"
-	"github.com/angusgmorrison/hexagonal/repository/postgres"
+	"github.com/angusgmorrison/hexagonal/repository/sql/database"
 )
 
 func main() {
@@ -32,11 +32,12 @@ func run() error {
 		return fmt.Errorf("envconfig.New: %w", err)
 	}
 
-	db, err := postgres.NewDB(envConfig.DB)
+	db, err := database.New(envConfig.DB)
 	if err != nil {
 		return fmt.Errorf("postgres.NewDB: %w", err)
 	}
 
+	// TODO: Refactor
 	absSeedsPath, err := filepath.Abs(*seedsPath)
 	if err != nil {
 		return fmt.Errorf("create absolute seeds path: %w", err)

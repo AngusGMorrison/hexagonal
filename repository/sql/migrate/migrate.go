@@ -1,4 +1,4 @@
-package postgres
+package migrate
 
 import (
 	"errors"
@@ -13,8 +13,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-// MigrateConfig is a configuration object for migrations.
-type MigrateConfig struct {
+// Config is a configuration object for migrations.
+type Config struct {
 	// ForceVersion specifies the migration version to force-set.
 	ForceVersion int
 
@@ -27,7 +27,7 @@ type MigrateConfig struct {
 }
 
 // Migrate triggers a migration on the database using the specified Config.
-func Migrate(databaseURL, migrationPath string, logger *log.Logger, config MigrateConfig) error {
+func Migrate(databaseURL, migrationPath string, logger *log.Logger, config Config) error {
 	fmt.Println(migrationPath)
 	migrator, err := newMigrator(databaseURL, migrationPath, logger, config)
 	if err != nil {
@@ -50,16 +50,16 @@ func Migrate(databaseURL, migrationPath string, logger *log.Logger, config Migra
 // relative to the running binary (e.g. during tests), so it should be joined
 // into an absolute path before use.
 func RelativeMigrationDir() string {
-	return filepath.Join("repository", "postgres", "migration")
+	return filepath.Join("repository", "sql", "migrate", "migrations")
 }
 
 type migrator struct {
 	migrate *migrate.Migrate
 	logger  *log.Logger
-	config  MigrateConfig
+	config  Config
 }
 
-func newMigrator(databaseURL, migrationPath string, logger *log.Logger, config MigrateConfig) (*migrator, error) {
+func newMigrator(databaseURL, migrationPath string, logger *log.Logger, config Config) (*migrator, error) {
 	pathWithScheme := filepath.Join("file://", migrationPath)
 
 	inner, err := migrate.New(pathWithScheme, databaseURL)

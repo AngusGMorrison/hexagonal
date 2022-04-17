@@ -4,4 +4,5 @@ INSERT INTO transactions (
 ) VALUES (
 	:counterparty_name, :counterparty_iban, :counterparty_bic, :amount_cents,
 	:amount_currency, :bank_account_id, :description
-) RETURNING *;
+)
+RETURNING *;

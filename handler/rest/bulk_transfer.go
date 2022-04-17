@@ -1,23 +1,12 @@
 package rest
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/angusgmorrison/hexagonal/service"
 	"github.com/gin-gonic/gin"
 )
-
-// TransactionService describes the methods a handler expects to call to perform
-// transfers. Using an interface allows us to mock services when
-// testing. This interface should follow the concrete service type.
-type TransactionService interface {
-	BulkTransaction(ctx context.Context, bt service.BulkTransaction) error
-}
-
-// Statically verify that the interface and concrete type remain in sync.
-var _ TransactionService = (*service.TransactionService)(nil)
 
 // bulkTransferRequest represents an incoming bulk transfer payload.
 type bulkTransferRequest struct {
@@ -29,7 +18,7 @@ type bulkTransferRequest struct {
 
 func (btr bulkTransferRequest) toDomain() service.BulkTransaction {
 	bt := service.BulkTransaction{
-		Account: service.BankAccount{
+		BankAccount: service.BankAccount{
 			OrganizationName: btr.OrganizationName,
 			OrganizationBIC:  btr.OrganizationBIC,
 			OrganizationIBAN: btr.OrganizationIBAN,
@@ -91,7 +80,7 @@ func (s *Server) handleCreateBulkTransfer() gin.HandlerFunc {
 			return
 		}
 
-		if err := s.transactionService.BulkTransaction(c, btr.toDomain()); err != nil {
+		if err := s.bulkTransactionService.BulkTransaction(c, btr.toDomain()); err != nil {
 			s.logger.Printf("Bulk transfer failed: %s", err)
 			c.AbortWithStatus(http.StatusUnprocessableEntity)
 
