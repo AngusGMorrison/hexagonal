@@ -1,24 +1,24 @@
-DROP TABLE IF EXISTS bank_accounts CASCADE;
-DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS courses CASCADE;
+DROP TABLE IF EXISTS students;
 
-CREATE TABLE bank_accounts (
+CREATE TABLE courses (
   id BIGSERIAL PRIMARY KEY,
-  organization_name VARCHAR(255) NOT NULL,
-  balance_cents BIGINT NOT NULL,
-  iban VARCHAR(255) NOT NULL,
-  bic VARCHAR(255) NOT NULL
+  code VARCHAR(255) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  capacity INT NOT NULL,
+  description TEXT
 );
 
-CREATE UNIQUE INDEX iban_idx
-ON bank_accounts (iban);
+CREATE UNIQUE INDEX courses_code_idx
+ON courses (code);
 
-CREATE TABLE transactions (
+CREATE TABLE students (
   id BIGSERIAL PRIMARY KEY,
-  bank_account_id BIGINT NOT NULL REFERENCES bank_accounts,
-  counterparty_name VARCHAR(255) NOT NULL,
-  counterparty_iban VARCHAR(255) NOT NULL,
-  counterparty_bic VARCHAR(255) NOT NULL,
-  amount_cents BIGINT NOT NULL,
-  amount_currency VARCHAR(255) NOT NULL,
-  description VARCHAR(255) NOT NULL
+  name VARCHAR(255) NOT NULL,
+  birthdate DATE NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  course_id BIGINT NOT NULL REFERENCES courses
 );
+
+CREATE UNIQUE INDEX students_email_idx
+ON students (email);

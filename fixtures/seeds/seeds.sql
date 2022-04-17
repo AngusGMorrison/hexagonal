@@ -1,11 +1,16 @@
-INSERT INTO bank_accounts (organization_name, balance_cents, iban, bic)
-VALUES
-  ('ACME Corp', 10000000, 'FR10474608000002006107XXXXX', 'OIVUSCLQXXX');
+INSERT INTO courses (title, code, capacity, description)
+VALUES (
+  'Structure and Interpretation of Computer Programs',
+  'SCIP',
+  5,
+  'The classic introduction to computer programming.'
+);
 
-INSERT INTO transactions (
-  counterparty_name, counterparty_iban, counterparty_bic, amount_cents,
-  amount_currency, bank_account_id, description
+WITH course_fk AS (
+  SELECT id FROM courses
+  WHERE code = 'SCIP'
 )
+INSERT INTO students (name, birthday, email, course_id)
 VALUES
-  ('ACME Corp. Main Account', 'EE382200221020145685', 'CCOPFRPPXXX', 11000000, 'EUR', 1, 'Treasury income'),
-  ('Bip Bip', 'EE383680981021245685', 'CRLYFRPPTOU', -1000000, 'EUR', 1, 'Bip Bip Salary');
+  ('Ramdas Tifft', '1991-10-03', 'r.tifft@gmail.com', course_fk),
+  ('Matheo Travieso', '1984-04-11', 'mat@travieso.com', course_fk);
