@@ -15,7 +15,8 @@ import (
 	"github.com/angusgmorrison/hexagonal/envconfig"
 	"github.com/angusgmorrison/hexagonal/handler/rest"
 	server "github.com/angusgmorrison/hexagonal/handler/rest"
-	"github.com/angusgmorrison/hexagonal/repository/postgres"
+	"github.com/angusgmorrison/hexagonal/repository/sql/database"
+	"github.com/angusgmorrison/hexagonal/repository/sql/scribe"
 	"github.com/angusgmorrison/hexagonal/service"
 )
 
@@ -51,24 +52,16 @@ func TestMain(m *testing.M) {
 func NewServer(logger *log.Logger) (*server.Server, error) {
 	envConfig := defaultEnvConfig()
 
-	db, err := postgres.NewDB(envConfig.DB)
+	db, err := database.New(envConfig.DB)
 	if err != nil {
 		return nil, fmt.Errorf("create database: %w", err)
 	}
 
-	bankAccountRepo, err := postgres.NewBankAccountRepository(db, envConfig.App)
-	if err != nil {
-		return nil, fmt.Errorf("create BankAccountRepository: %w", err)
-	}
-
-	transactionRepo, err := postgres.NewTransactionRepository(db, envConfig.App)
-	if err != nil {
-		return nil, fmt.Errorf("create TransactionRepository: %w", err)
-	}
-
-	transferService := service.NewTransactionService(
-		logger, bankAccountRepo, transactionRepo)
-	server := rest.NewServer(logger, envConfig, transferService)
+	var (
+		btScribeFactory = scribe.NewBulkTransactionScribeFactory(db)
+		btService       = service.NewBulkTransactionService(logger, btScribeFactory)
+		server          = rest.NewServer(logger, envConfig, btService)
+	)
 
 	return server, nil
 }

@@ -1,22 +1,23 @@
-// Package bankaccountstable operates on a database bank_accounts table and
-// represents its rows. It is database driver-agnostic.
-package bankaccountstable
+// Package bankaccounts operates on a database bank_accounts table and
+// represents its rows. It is driver-agnostic for all database drivers that
+// support positional arguments in queries.
+package bankaccounts
 
 import (
 	"context"
 	"embed"
 	"fmt"
 
+	"github.com/angusgmorrison/hexagonal/repository/sql"
 	"github.com/angusgmorrison/hexagonal/service"
 )
 
-// row represents a row of a bank_accounts table.
 type row struct {
-	ID               int64
-	OrganizationName string
-	IBAN             string
-	BIC              string
-	BalanceCents     int64
+	ID               int64  `db:"id"`
+	OrganizationName string `db:"organization_name"`
+	IBAN             string `db:"iban"`
+	BIC              string `db:"bic"`
+	BalanceCents     int64  `db:"balance_cents"`
 }
 
 func rowFromDomain(ba service.BankAccount) row {
@@ -39,30 +40,19 @@ func (r row) toDomain() service.BankAccount {
 	}
 }
 
-// executor executes a query that returns no result.
-type executor interface {
-	Execute(ctx context.Context, query string, args ...any) error
-}
-
-// selector executes a query that populates dest with the returned rows. Since
-// the number of rows is unknown, dest must be a pointer to a slice.
-type selector interface {
-	Select(ctx context.Context, dest any, query string, args ...any) error
-}
-
 //go:embed queries
 var _queries embed.FS
 
 // Count returns the number of rows in the table.
-func Count(ctx context.Context, s selector) (int64, error) {
-	query, err := _queries.ReadFile("count_bank_accounts.sql")
+func Count(ctx context.Context, s sql.Queryer) (int64, error) {
+	query, err := _queries.ReadFile("queries/count_bank_accounts.sql")
 	if err != nil {
-		return 0, fmt.Errorf("read count_bank_accounts.sql: %w", err)
+		return 0, fmt.Errorf("read queries/count_bank_accounts.sql: %w", err)
 	}
 
 	results := make([]int64, 0, 1)
 
-	if err := s.Select(ctx, &results, string(query)); err != nil {
+	if err := s.Query(ctx, &results, string(query)); err != nil {
 		return 0, fmt.Errorf("count bank_accounts: %w", err)
 	}
 
@@ -70,15 +60,15 @@ func Count(ctx context.Context, s selector) (int64, error) {
 }
 
 // FindByID returns the first account with the corresponding row ID.
-func FindByID(ctx context.Context, s selector, id int64) (service.BankAccount, error) {
-	query, err := _queries.ReadFile("find_bank_account_by_id.sql")
+func FindByID(ctx context.Context, q sql.Queryer, id int64) (service.BankAccount, error) {
+	query, err := _queries.ReadFile("queries/find_bank_account_by_id.sql")
 	if err != nil {
-		return service.BankAccount{}, fmt.Errorf("read find_bank_account_by_id.sql: %w", err)
+		return service.BankAccount{}, fmt.Errorf("read queries/find_bank_account_by_id.sql: %w", err)
 	}
 
 	results := make([]row, 0, 1)
 
-	if err := s.Select(ctx, &results, string(query), id); err != nil {
+	if err := q.Query(ctx, &results, string(query), id); err != nil {
 		return service.BankAccount{}, fmt.Errorf("FindByID %q: %w", id, err)
 	}
 
@@ -86,15 +76,15 @@ func FindByID(ctx context.Context, s selector, id int64) (service.BankAccount, e
 }
 
 // FindByIBAN returns the first account with the corresponding IBAN.
-func FindByIBAN(ctx context.Context, s selector, iban string) (service.BankAccount, error) {
-	query, err := _queries.ReadFile("find_bank_account_by_iban.sql")
+func FindByIBAN(ctx context.Context, q sql.Queryer, iban string) (service.BankAccount, error) {
+	query, err := _queries.ReadFile("queries/find_bank_account_by_iban.sql")
 	if err != nil {
-		return service.BankAccount{}, fmt.Errorf("read find_bank_account_by_iban.sql: %w", err)
+		return service.BankAccount{}, fmt.Errorf("read queries/find_bank_account_by_iban.sql: %w", err)
 	}
 
 	results := make([]row, 0, 1)
 
-	if err := s.Select(ctx, &results, string(query), iban); err != nil {
+	if err := q.Query(ctx, &results, string(query), iban); err != nil {
 		return service.BankAccount{}, fmt.Errorf("FindByIBAN %q: %w", iban, err)
 	}
 
@@ -104,12 +94,12 @@ func FindByIBAN(ctx context.Context, s selector, iban string) (service.BankAccou
 // Insert saves a new row to the table, returning the inserted account.
 func Insert(
 	ctx context.Context,
-	s selector,
+	q sql.Queryer,
 	ba service.BankAccount,
 ) (service.BankAccount, error) {
-	query, err := _queries.ReadFile("insert_bank_accounts.sql")
+	query, err := _queries.ReadFile("queries/insert_bank_accounts.sql")
 	if err != nil {
-		return service.BankAccount{}, fmt.Errorf("read insert_bank_accounts.sql: %w", err)
+		return service.BankAccount{}, fmt.Errorf("read queries/insert_bank_accounts.sql: %w", err)
 	}
 
 	var (
@@ -123,7 +113,7 @@ func Insert(
 		results = make([]row, 0, 1)
 	)
 
-	if err := s.Select(ctx, &results, string(query), args...); err != nil {
+	if err := q.Query(ctx, &results, string(query), args...); err != nil {
 		return ba, fmt.Errorf("execute insert bank account: %w", err)
 	}
 
@@ -133,12 +123,12 @@ func Insert(
 // Update updates an existing bank account, which is matched using its ID.
 func Update(
 	ctx context.Context,
-	s selector,
+	q sql.Queryer,
 	ba service.BankAccount,
 ) (service.BankAccount, error) {
-	query, err := _queries.ReadFile("update_bank_account.sql")
+	query, err := _queries.ReadFile("queries/update_bank_account.sql")
 	if err != nil {
-		return service.BankAccount{}, fmt.Errorf("read update_bank_account.sql: %w", err)
+		return service.BankAccount{}, fmt.Errorf("read queries/update_bank_account.sql: %w", err)
 	}
 
 	var (
@@ -153,7 +143,7 @@ func Update(
 		results = make([]row, 0, 1)
 	)
 
-	if err := s.Select(ctx, &results, string(query), args...); err != nil {
+	if err := q.Query(ctx, &results, string(query), args...); err != nil {
 		return ba, fmt.Errorf("execute update query: %w", err)
 	}
 

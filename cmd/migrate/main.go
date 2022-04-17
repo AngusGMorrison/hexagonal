@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/angusgmorrison/hexagonal/envconfig"
-	"github.com/angusgmorrison/hexagonal/repository/postgres"
+	"github.com/angusgmorrison/hexagonal/repository/sql/migrate"
 )
 
 func main() {
@@ -33,15 +33,15 @@ func run(logger *log.Logger) error {
 		return fmt.Errorf("envconfig.New: %w", err)
 	}
 
-	config := postgres.MigrateConfig{
+	config := migrate.Config{
 		ForceVersion: *forceVersion,
 		Rollback:     *rollback,
 		Verbose:      *verbose,
 	}
 
-	migrationPath := filepath.Join(env.App.Root, postgres.RelativeMigrationDir())
+	migrationPath := filepath.Join(env.App.Root, migrate.RelativeMigrationDir())
 
-	if err := postgres.Migrate(env.DB.URL(), migrationPath, logger, config); err != nil {
+	if err := migrate.Migrate(env.DB.URL(), migrationPath, logger, config); err != nil {
 		return fmt.Errorf("trigger migration: %w", err)
 	}
 

@@ -8,74 +8,39 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// Transactor satisfies service.Transactor.
-type Transactor struct {
-	mock.Mock
+// BulkTransactionService satisfies service.BulkTransactionService.
+type BulkTransactionService struct {
+	mock mock.Mock
 }
 
-// Commit returns the error passed to the mock.
-func (t *Transactor) Commit() error {
-	args := t.Called()
-
-	return args.Error(0)
-}
-
-// Rollback returns the errors passed to the mock.
-func (t *Transactor) Rollback() error {
-	args := t.Called()
-
-	return args.Error(0)
-}
-
-// AtomicTransferRepository satisfies service.AtomicTransferRepository.
-type AtomicTransferRepository struct {
-	mock.Mock
-}
-
-// BeginSerializableTx returns the service.Transactor and error passed to the
-// mock.
-func (atr *AtomicTransferRepository) BeginSerializableTx(
-	ctx context.Context,
-) (service.Transactor, error) {
-	args := atr.Called(ctx)
-
-	tx := args.Get(0).(*Transactor)
-
-	return tx, args.Error(1)
-}
-
-// GetBankAccountByIBAN returns the service.BankAccount and error passed to
+// GetBankAccountByIBAN returns the service.BulkTransaction and error passed to
 // the mock.
-func (atr *AtomicTransferRepository) GetBankAccountByIBAN(
+func (bts *BulkTransactionService) GetBankAccountByIBAN(
 	ctx context.Context,
-	tx service.Transactor,
-	iban string,
-) (service.BankAccount, error) {
-	args := atr.Called(ctx, tx, iban)
+	bt service.BulkTransaction,
+) (service.BulkTransaction, error) {
+	args := bts.mock.Called(ctx, bt)
 
-	bankAccount := args.Get(0).(service.BankAccount)
+	bulkTransaction := args.Get(0).(service.BulkTransaction)
 
-	return bankAccount, args.Error(1)
+	return bulkTransaction, args.Error(1)
 }
 
-// UpdateBankAccount returns the error passed to the mock.
-func (atr *AtomicTransferRepository) UpdateBankAccount(
+// Save returns the service.BulkTransaction and error passed to the mock.
+func (bts *BulkTransactionService) Save(
 	ctx context.Context,
-	tx service.Transactor,
-	ba service.BankAccount,
-) error {
-	args := atr.Called(ctx, tx, ba)
+	bt service.BulkTransaction,
+) (service.BulkTransaction, error) {
+	args := bts.mock.Called(ctx, bt)
 
-	return args.Error(0)
+	bulkTransaction := args.Get(0).(service.BulkTransaction)
+
+	return bulkTransaction, args.Error(1)
 }
 
-// SaveCreditTransfers returns the error passed to the mock.
-func (atr *AtomicTransferRepository) SaveCreditTransfers(
-	ctx context.Context,
-	tx service.Transactor,
-	transfers service.Transactions,
-) error {
-	args := atr.Called(ctx, tx, transfers)
+// Abort returns the error passed to the mock.
+func (bts *BulkTransactionService) Abort() error {
+	args := bts.mock.Called()
 
 	return args.Error(0)
 }

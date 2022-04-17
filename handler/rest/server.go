@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/angusgmorrison/hexagonal/envconfig"
+	"github.com/angusgmorrison/hexagonal/service"
 )
 
 // Server provides HTTP routing and handler dependencies.
@@ -29,14 +30,14 @@ type Server struct {
 
 	// Services are the interfaces by which handlers communicate requests to
 	// business logic.
-	transactionService TransactionService
+	bulkTransactionService service.BulkTransactionService
 }
 
 // NewServer returns a new hexagonal server configured using the provided Config.
 func NewServer(
 	logger *log.Logger,
 	envConfig envconfig.EnvConfig,
-	transactionService TransactionService,
+	transactionService service.BulkTransactionService,
 ) *Server {
 	server := Server{
 		config: envConfig,
@@ -46,8 +47,8 @@ func NewServer(
 			ReadTimeout:  envConfig.HTTP.ReadTimeout,
 			WriteTimeout: envConfig.HTTP.WriteTimeout,
 		},
-		errorStream:        make(chan error, 1),
-		transactionService: transactionService,
+		errorStream:            make(chan error, 1),
+		bulkTransactionService: transactionService,
 	}
 
 	server.setupRoutes()

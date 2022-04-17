@@ -7,7 +7,8 @@ import (
 
 	"github.com/angusgmorrison/hexagonal/envconfig"
 	"github.com/angusgmorrison/hexagonal/handler/rest"
-	"github.com/angusgmorrison/hexagonal/repository/postgres"
+	"github.com/angusgmorrison/hexagonal/repository/sql/database"
+	"github.com/angusgmorrison/hexagonal/repository/sql/scribe"
 	"github.com/angusgmorrison/hexagonal/service"
 )
 
@@ -27,7 +28,7 @@ func run(logger *log.Logger) error {
 	}
 
 	// Set up the server's IO dependencies.
-	db, err := postgres.NewDB(envConfig.DB)
+	db, err := database.New(envConfig.DB)
 	if err != nil {
 		return fmt.Errorf("create database: %w", err)
 	}
@@ -38,21 +39,11 @@ func run(logger *log.Logger) error {
 		}
 	}()
 
-	bankAccountRepo, err := postgres.NewBankAccountRepository(db, envConfig.App)
-	if err != nil {
-		return fmt.Errorf("create BankAccountRepository: %w", err)
-	}
-
-	transactionRepo, err := postgres.NewTransactionRepository(db, envConfig.App)
-	if err != nil {
-		return fmt.Errorf("create TransactionRepository: %w", err)
-	}
-
-	transactionService := service.NewTransactionService(
-		logger, bankAccountRepo, transactionRepo)
-
-	// Inject the dependencies into the server.
-	server := rest.NewServer(logger, envConfig, transactionService)
+	var (
+		btScribeFactory = scribe.NewBulkTransactionScribeFactory(db)
+		btService       = service.NewBulkTransactionService(logger, btScribeFactory)
+		server          = rest.NewServer(logger, envConfig, btService)
+	)
 
 	return server.Run()
 }
