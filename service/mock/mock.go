@@ -10,16 +10,28 @@ import (
 
 // BulkTransactionService satisfies service.BulkTransactionService.
 type BulkTransactionService struct {
-	mock mock.Mock
+	mock.Mock
+}
+
+// BulkTransaction returns the error passed to the mock.
+func (bts *BulkTransactionService) BulkTransaction(ctx context.Context, bt service.BulkTransaction) error {
+	args := bts.Called(ctx, bt)
+
+	return args.Error(0)
+}
+
+// BulkTransactionRepository satisfies service.BulkTransactionRepository.
+type BulkTransactionRepository struct {
+	mock.Mock
 }
 
 // GetBankAccountByIBAN returns the service.BulkTransaction and error passed to
 // the mock.
-func (bts *BulkTransactionService) GetBankAccountByIBAN(
+func (btr *BulkTransactionRepository) GetBankAccountByIBAN(
 	ctx context.Context,
 	bt service.BulkTransaction,
 ) (service.BulkTransaction, error) {
-	args := bts.mock.Called(ctx, bt)
+	args := btr.Called(ctx, bt)
 
 	bulkTransaction := args.Get(0).(service.BulkTransaction)
 
@@ -27,11 +39,11 @@ func (bts *BulkTransactionService) GetBankAccountByIBAN(
 }
 
 // Save returns the service.BulkTransaction and error passed to the mock.
-func (bts *BulkTransactionService) Save(
+func (btr *BulkTransactionRepository) Save(
 	ctx context.Context,
 	bt service.BulkTransaction,
 ) (service.BulkTransaction, error) {
-	args := bts.mock.Called(ctx, bt)
+	args := btr.Called(ctx, bt)
 
 	bulkTransaction := args.Get(0).(service.BulkTransaction)
 
@@ -39,8 +51,8 @@ func (bts *BulkTransactionService) Save(
 }
 
 // Abort returns the error passed to the mock.
-func (bts *BulkTransactionService) Abort() error {
-	args := bts.mock.Called()
+func (btr *BulkTransactionRepository) Abort() error {
+	args := btr.Called()
 
 	return args.Error(0)
 }

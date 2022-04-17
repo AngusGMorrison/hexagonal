@@ -1,8 +1,8 @@
 UPDATE bank_accounts
 SET
-	organization_name = $2,
-	iban = $3,
-	bic = $4,
-	balance_cents = $5
-WHERE id = $1
+	organization_name = :organization_name,
+	iban = :iban,
+	bic = :bic,
+	balance_cents = :balance_cents
+WHERE id = :id
 RETURNING *;

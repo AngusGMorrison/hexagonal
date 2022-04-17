@@ -14,8 +14,8 @@ import (
 	"testing"
 
 	"github.com/angusgmorrison/hexagonal/envconfig"
-	restmock "github.com/angusgmorrison/hexagonal/handler/rest/mock"
 	"github.com/angusgmorrison/hexagonal/service"
+	svcmock "github.com/angusgmorrison/hexagonal/service/mock"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -68,8 +68,8 @@ func TestHandleBulkTransfer_BadRequest(t *testing.T) {
 			t.Parallel()
 
 			var (
-				transactionService = restmock.TransactionService{}
-				server             = NewServer(logger, defaultConfig(), &transactionService)
+				btService = svcmock.BulkTransactionService{}
+				server    = NewServer(logger, defaultConfig(), &btService)
 			)
 
 			fixturePath := filepath.Join("testdata", tc.fixtureFilename)
@@ -124,8 +124,8 @@ func TestHandleBulkTransfer_ValidRequest(t *testing.T) {
 			t.Parallel()
 
 			var (
-				transactionService = restmock.TransactionService{}
-				server             = NewServer(logger, defaultConfig(), &transactionService)
+				btService = svcmock.BulkTransactionService{}
+				server    = NewServer(logger, defaultConfig(), &btService)
 			)
 
 			fixturePath := filepath.Join("testdata", tc.fixtureFilename)
@@ -152,7 +152,7 @@ func TestHandleBulkTransfer_ValidRequest(t *testing.T) {
 				},
 			}
 
-			transactionService.On(
+			btService.On(
 				"BulkTransaction",
 				mock.AnythingOfType("*gin.Context"),
 				expectedBTR.toDomain(),
@@ -160,7 +160,7 @@ func TestHandleBulkTransfer_ValidRequest(t *testing.T) {
 
 			server.ServeHTTP(w, r)
 
-			transactionService.AssertExpectations(t)
+			btService.AssertExpectations(t)
 
 			body, err := ioutil.ReadAll(w.Body)
 			require.NoError(err)

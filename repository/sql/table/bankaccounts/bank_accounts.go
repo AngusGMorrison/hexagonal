@@ -94,7 +94,7 @@ func FindByIBAN(ctx context.Context, q sql.Queryer, iban string) (service.BankAc
 // Insert saves a new row to the table, returning the inserted account.
 func Insert(
 	ctx context.Context,
-	q sql.Queryer,
+	qb sql.BindQueryer,
 	ba service.BankAccount,
 ) (service.BankAccount, error) {
 	query, err := _queries.ReadFile("queries/insert_bank_accounts.sql")
@@ -102,18 +102,14 @@ func Insert(
 		return service.BankAccount{}, fmt.Errorf("read queries/insert_bank_accounts.sql: %w", err)
 	}
 
-	var (
-		r    = rowFromDomain(ba)
-		args = []any{
-			r.OrganizationName, // 1
-			r.IBAN,             // 2
-			r.BIC,              // 3
-			r.BalanceCents,     // 4
-		}
-		results = make([]row, 0, 1)
-	)
+	boundQuery, positionalArgs, err := qb.Bind(string(query), rowFromDomain(ba))
+	if err != nil {
+		return service.BankAccount{}, fmt.Errorf("bind queries/insert_bank_accounts.sql: %w", err)
+	}
 
-	if err := q.Query(ctx, &results, string(query), args...); err != nil {
+	results := make([]row, 0, 1)
+
+	if err := qb.Query(ctx, &results, boundQuery, positionalArgs...); err != nil {
 		return ba, fmt.Errorf("execute insert bank account: %w", err)
 	}
 
@@ -123,7 +119,7 @@ func Insert(
 // Update updates an existing bank account, which is matched using its ID.
 func Update(
 	ctx context.Context,
-	q sql.Queryer,
+	bq sql.BindQueryer,
 	ba service.BankAccount,
 ) (service.BankAccount, error) {
 	query, err := _queries.ReadFile("queries/update_bank_account.sql")
@@ -131,19 +127,14 @@ func Update(
 		return service.BankAccount{}, fmt.Errorf("read queries/update_bank_account.sql: %w", err)
 	}
 
-	var (
-		r    = rowFromDomain(ba)
-		args = []any{
-			r.ID,               // 1
-			r.OrganizationName, // 2
-			r.IBAN,             // 3
-			r.BIC,              // 4
-			r.BalanceCents,     // 5
-		}
-		results = make([]row, 0, 1)
-	)
+	boundQuery, positionalArgs, err := bq.Bind(string(query), rowFromDomain(ba))
+	if err != nil {
+		return service.BankAccount{}, fmt.Errorf("bind queries/update_bank_account.sql: %w", err)
+	}
 
-	if err := q.Query(ctx, &results, string(query), args...); err != nil {
+	results := make([]row, 0, 1)
+
+	if err := bq.Query(ctx, &results, boundQuery, positionalArgs...); err != nil {
 		return ba, fmt.Errorf("execute update query: %w", err)
 	}
 
