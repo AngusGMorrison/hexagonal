@@ -2,16 +2,6 @@
   "course_title": "Computer Science",
   "students": [
     {
-      "name": "Svetlana Bernhard",
-      "birthdate": "2000-01-29",
-      "email": "sbernhard123@gmail.com"
-    },
-    {
-      "name": "Rhodri Murray",
-      "birthdate": "1998-12-01",
-      "email": "murrayboi98@hotmail.com"
-    },
-    {
       "name": "Dobrila Starr",
       "birthdate": "1989-08-21",
       "email": "dob.starr@googlemail.com"

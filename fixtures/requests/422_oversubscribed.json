@@ -1,5 +1,5 @@
 {
-  "course_title": "Computer Science",
+  "course_title": "Structure and Interpretation of Computer Programs",
   "course_code": "SCIP",
   "students": [
     {
@@ -11,6 +11,11 @@
       "name": "Matheo Travieso",
       "birthdate": "1984-04-11",
       "email": "mat@travieso.com"
+    },
+    {
+      "name": "Ampelius Fabian",
+      "birthdate": "1990-11-22",
+      "email": "amp-fab@btinternet.com"
     }
   ]
 }

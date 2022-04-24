@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/angusgmorrison/hexagonal/envconfig"
-	"github.com/angusgmorrison/hexagonal/repository/sql/database"
+	"github.com/angusgmorrison/hexagonal/internal/envconfig"
+	"github.com/angusgmorrison/hexagonal/internal/repository/sql/database"
 )
 
 func main() {

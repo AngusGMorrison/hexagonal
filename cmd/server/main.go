@@ -5,11 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/angusgmorrison/hexagonal/envconfig"
-	"github.com/angusgmorrison/hexagonal/handler/rest"
-	"github.com/angusgmorrison/hexagonal/repository/sql/database"
-	"github.com/angusgmorrison/hexagonal/repository/sql/scribe"
-	"github.com/angusgmorrison/hexagonal/service"
+	"github.com/angusgmorrison/hexagonal/internal/envconfig"
+	"github.com/angusgmorrison/hexagonal/internal/handler/rest"
+	"github.com/angusgmorrison/hexagonal/internal/repository/sql/database"
+	"github.com/angusgmorrison/hexagonal/internal/repository/sql/scribe"
 )
 
 func main() {

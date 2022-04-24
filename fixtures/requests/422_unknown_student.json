@@ -1,0 +1,11 @@
+{
+  "course_title": "Structure and Interpretation of Computer Programs",
+  "course_code": "SCIP",
+  "students": [
+    {
+      "name": "Svetlana Bernhard",
+      "birthdate": "2000-01-29",
+      "email": "sbernhard123@gmail.com"
+    }
+  ]
+}
