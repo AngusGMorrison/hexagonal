@@ -1,0 +1,11 @@
+{
+  "course_title": "Computer Science",
+  "course_code": "SICP",
+  "students": [
+    {
+      "name": "Ramdas Tifft",
+      "birthdate": "1991-10-03",
+      "email": "r.tifft@gmail.com"
+    }
+  ]
+}

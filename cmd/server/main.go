@@ -9,6 +9,8 @@ import (
 	"github.com/angusgmorrison/hexagonal/internal/handler/rest"
 	"github.com/angusgmorrison/hexagonal/internal/repository/sql/database"
 	"github.com/angusgmorrison/hexagonal/internal/repository/sql/scribe"
+	"github.com/angusgmorrison/hexagonal/internal/service/classservice"
+	"github.com/go-playground/validator/v10"
 )
 
 func main() {
@@ -39,9 +41,10 @@ func run(logger *log.Logger) error {
 	}()
 
 	var (
-		btScribeFactory = scribe.NewBulkTransactionScribeFactory(db)
-		btService       = service.NewBulkTransactionService(logger, btScribeFactory)
-		server          = rest.NewServer(logger, envConfig, btService)
+		validate           = validator.New()
+		classScribeFactory = scribe.NewAtomicClassScribeFactory(db)
+		classService       = classservice.New(logger, validate, classScribeFactory)
+		server             = rest.NewServer(logger, envConfig, classService)
 	)
 
 	return server.Run()
