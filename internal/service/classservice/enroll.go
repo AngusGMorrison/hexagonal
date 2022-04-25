@@ -36,7 +36,7 @@ func (svc *classService) Enroll(ctx context.Context, req EnrollmentRequest) erro
 	if !class.hasCapacityFor(req.Students) {
 		return OversubscribedError{
 			CourseCode:           class.Code,
-			AvailableSpaces:      class.remainingSpaces(),
+			AvailableSpaces:      class.availableSpaces(),
 			AttemptedEnrollments: uint32(len(req.Students)),
 		}
 	}

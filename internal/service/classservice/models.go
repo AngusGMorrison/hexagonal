@@ -72,10 +72,10 @@ type Class struct {
 }
 
 func (c Class) hasCapacityFor(s Students) bool {
-	return c.remainingSpaces() >= uint32(len(s))
+	return c.availableSpaces() >= uint32(len(s))
 }
 
-func (c Class) remainingSpaces() uint32 {
+func (c Class) availableSpaces() uint32 {
 	return c.Course.Capacity - uint32(len(c.Students))
 }
 

@@ -15,7 +15,6 @@ import (
 
 	"github.com/angusgmorrison/hexagonal/internal/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/service/classservice"
-	"github.com/angusgmorrison/hexagonal/internal/service/classservice/mocks"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -44,7 +43,7 @@ func TestHandleCreateEnrollments(t *testing.T) {
 
 		var (
 			logger       = log.New(os.Stdout, "TestHandleCreateEnrollments ", log.LstdFlags)
-			classService = mocks.NewInterface(t)
+			classService = classservice.NewMockInterface(t)
 			server       = NewServer(logger, defaultConfig(), classService)
 			r            = httptest.NewRequest(http.MethodPost, endpoint, nil)
 			w            = httptest.NewRecorder()
@@ -97,7 +96,7 @@ func TestHandleCreateEnrollments(t *testing.T) {
 
 				var (
 					logger       = log.New(os.Stdout, "TestHandleCreateEnrollments ", log.LstdFlags)
-					classService = mocks.NewInterface(t)
+					classService = classservice.NewMockInterface(t)
 					server       = NewServer(logger, defaultConfig(), classService)
 					r            = httptest.NewRequest(http.MethodPost, endpoint, bytes.NewReader(fixtureBytes))
 					w            = httptest.NewRecorder()
