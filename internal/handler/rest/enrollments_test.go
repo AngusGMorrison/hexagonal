@@ -11,9 +11,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/angusgmorrison/hexagonal/internal/envconfig"
+	"github.com/angusgmorrison/hexagonal/internal/primitive"
 	"github.com/angusgmorrison/hexagonal/internal/service/classservice"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/mock"
@@ -104,7 +104,7 @@ func TestHandleCreateEnrollments(t *testing.T) {
 
 				r.Header.Set("content-type", string(applicationJSON))
 
-				expectedBirthdate, err := time.Parse(birthdateLayout, "1991-10-03")
+				expectedBirthdate, err := primitive.ParseBirthdate("1991-10-03")
 				require.NoError(err)
 
 				expectedEnrollmentRequest := classservice.EnrollmentRequest{

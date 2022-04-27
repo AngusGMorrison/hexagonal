@@ -1,0 +1,11 @@
+{
+  "course_title": "Computer Science",
+  "course_code": "SICP",
+  "students": [
+    {
+      "name": "Kassandra Madhukar",
+      "birthdate": "1996-07-07",
+      "email": "km1996@gmail.com"
+    }
+  ]
+}

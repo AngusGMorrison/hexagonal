@@ -1,9 +1,7 @@
 package rest
 
 import (
-	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/angusgmorrison/hexagonal/internal/primitive"
 	"github.com/angusgmorrison/hexagonal/internal/service/classservice"
@@ -37,34 +35,14 @@ func (s students) toDomain() classservice.Students {
 
 type student struct {
 	Name      string                 `json:"name"`
-	Birthdate birthdate              `json:"birthdate"`
+	Birthdate primitive.Birthdate    `json:"birthdate"`
 	Email     primitive.EmailAddress `json:"email"`
-}
-
-const birthdateLayout = "2006-01-02"
-
-type birthdate time.Time
-
-func (bd *birthdate) UnmarshalJSON(b []byte) error {
-	var rawDate string
-	if err := json.Unmarshal(b, &rawDate); err != nil {
-		return err
-	}
-
-	date, err := time.Parse(birthdateLayout, rawDate)
-	if err != nil {
-		return err
-	}
-
-	*bd = birthdate(date)
-
-	return nil
 }
 
 func (s student) toDomain() classservice.Student {
 	return classservice.Student{
 		Name:      s.Name,
-		Birthdate: time.Time(s.Birthdate),
+		Birthdate: s.Birthdate,
 		Email:     s.Email,
 	}
 }

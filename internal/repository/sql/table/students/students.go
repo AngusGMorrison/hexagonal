@@ -49,7 +49,7 @@ func SelectByEmail(
 ) ([]Row, error) {
 	query, err := _queries.ReadFile("queries/select_students_by_email.sql")
 	if err != nil {
-		return nil, fmt.Errorf("read queries/select_students_on_course.sql: %w", err)
+		return nil, fmt.Errorf("read queries/select_students_by_email.sql: %w", err)
 	}
 
 	results := make([]Row, 0, len(emails))
@@ -61,6 +61,27 @@ func SelectByEmail(
 
 	if err := q.Query(ctx, &results, string(query), inArg); err != nil {
 		return nil, fmt.Errorf("SelectByEmail(%q): %w", inArg, err)
+	}
+
+	return results, nil
+}
+
+// Insert inserts the given students into the table.
+func Insert(ctx context.Context, bq sql.BindQueryer, students []Row) ([]Row, error) {
+	query, err := _queries.ReadFile("queries/insert_students.sql")
+	if err != nil {
+		return nil, fmt.Errorf("read queries/insert_students.sql: %w", err)
+	}
+
+	boundQuery, positionalArgs, err := bq.Bind(string(query), students)
+	if err != nil {
+		return nil, fmt.Errorf("bind queries/insert_students.sql: %w", err)
+	}
+
+	results := make([]Row, 0, len(students))
+
+	if err := bq.Query(ctx, &results, boundQuery, positionalArgs...); err != nil {
+		return nil, fmt.Errorf("Insert: %w", err)
 	}
 
 	return results, nil

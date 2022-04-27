@@ -8,8 +8,8 @@ import (
 	"log"
 	"os"
 	testing "testing"
-	"time"
 
+	"github.com/angusgmorrison/hexagonal/internal/primitive"
 	"github.com/go-playground/validator/v10"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +35,7 @@ func TestEnroll(t *testing.T) {
 				name: "missing course code",
 				req: EnrollmentRequest{
 					CourseCode: "",
-					Students:   Students{defaultStudent()},
+					Students:   Students{defaultStudent(t)},
 				},
 			},
 			{
@@ -74,7 +74,7 @@ func TestEnroll(t *testing.T) {
 			scribe        = NewMockAtomicClassScribe(t)
 			service       = New(logger, validate, scribeFactory.Execute)
 			ctx           = context.Background()
-			req           = defaultEnrollmentRequest()
+			req           = defaultEnrollmentRequest(t)
 			wantErr       = errors.New("course not found")
 		)
 
@@ -101,14 +101,14 @@ func TestEnroll(t *testing.T) {
 			scribe        = NewMockAtomicClassScribe(t)
 			service       = New(logger, validate, scribeFactory.Execute)
 			ctx           = context.Background()
-			req           = defaultEnrollmentRequest()
+			req           = defaultEnrollmentRequest(t)
 			wantErr       = UnregisteredStudentsError{Students: req.Students}
 		)
 
 		scribeFactory.On("Execute").Return(scribe)
 		scribe.On("Begin", ctx).Return(nil)
 		scribe.On("Rollback").Return(nil)
-		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(defaultClass(), nil)
+		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(defaultClass(t), nil)
 		scribe.On(
 			"GetStudentsByEmail",
 			ctx,
@@ -132,19 +132,24 @@ func TestEnroll(t *testing.T) {
 			scribe        = NewMockAtomicClassScribe(t)
 			service       = New(logger, validate, scribeFactory.Execute)
 			ctx           = context.Background()
-			req           = defaultEnrollmentRequest()
-			wantErr       = AlreadyEnrolledError{Students: req.Students}
+			req           = defaultEnrollmentRequest(t)
 		)
 
 		scribeFactory.On("Execute").Return(scribe)
 		scribe.On("Begin", ctx).Return(nil)
 		scribe.On("Rollback").Return(nil)
-		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(defaultClass(), nil)
+		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(defaultClass(t), nil)
+
+		registeredStudent := defaultStudent(t)
+		registeredStudent.ID = 1
+		registeredStudents := Students{registeredStudent}
+		wantErr := AlreadyEnrolledError{Students: registeredStudents}
+
 		scribe.On(
 			"GetStudentsByEmail",
 			ctx,
 			req.Students.EmailAddresses(),
-		).Return(req.Students, nil)
+		).Return(registeredStudents, nil)
 
 		err := service.Enroll(ctx, req)
 
@@ -163,7 +168,7 @@ func TestEnroll(t *testing.T) {
 			scribe        = NewMockAtomicClassScribe(t)
 			service       = New(logger, validate, scribeFactory.Execute)
 			ctx           = context.Background()
-			req           = defaultEnrollmentRequest()
+			req           = defaultEnrollmentRequest(t)
 		)
 
 		class := Class{
@@ -183,11 +188,16 @@ func TestEnroll(t *testing.T) {
 		scribe.On("Begin", ctx).Return(nil)
 		scribe.On("Rollback").Return(nil)
 		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(class, nil)
+
+		registeredStudent := defaultStudent(t)
+		registeredStudent.ID = 1
+		registeredStudents := Students{registeredStudent}
+
 		scribe.On(
 			"GetStudentsByEmail",
 			ctx,
 			req.Students.EmailAddresses(),
-		).Return(req.Students, nil)
+		).Return(registeredStudents, nil)
 
 		err := service.Enroll(ctx, req)
 
@@ -206,7 +216,7 @@ func TestEnroll(t *testing.T) {
 			scribe        = NewMockAtomicClassScribe(t)
 			service       = New(logger, validate, scribeFactory.Execute)
 			ctx           = context.Background()
-			req           = defaultEnrollmentRequest()
+			req           = defaultEnrollmentRequest(t)
 		)
 
 		class := Class{
@@ -220,16 +230,21 @@ func TestEnroll(t *testing.T) {
 		scribe.On("Begin", ctx).Return(nil)
 		scribe.On("Rollback").Return(nil)
 		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(class, nil)
+
+		registeredStudent := defaultStudent(t)
+		registeredStudent.ID = 1
+		registeredStudents := Students{registeredStudent}
+
 		scribe.On(
 			"GetStudentsByEmail",
 			ctx,
 			req.Students.EmailAddresses(),
-		).Return(req.Students, nil)
+		).Return(registeredStudents, nil)
 		scribe.On(
 			"EnrollStudents",
 			ctx,
 			class.Course,
-			req.Students,
+			registeredStudents,
 		).Return(class, nil)
 		scribe.On("Commit").Return(nil)
 
@@ -238,19 +253,23 @@ func TestEnroll(t *testing.T) {
 	})
 }
 
-func defaultEnrollmentRequest() EnrollmentRequest {
+func defaultEnrollmentRequest(t *testing.T) EnrollmentRequest {
+	t.Helper()
+
 	return EnrollmentRequest{
 		CourseCode: "SICP",
 		Students: Students{
-			defaultStudent(),
+			defaultStudent(t),
 		},
 	}
 }
 
-func defaultClass() Class {
+func defaultClass(t *testing.T) Class {
+	t.Helper()
+
 	return Class{
 		Course:   defaultCourse(),
-		Students: Students{defaultStudent()},
+		Students: Students{defaultStudent(t)},
 	}
 }
 
@@ -261,10 +280,15 @@ func defaultCourse() Course {
 	}
 }
 
-func defaultStudent() Student {
+func defaultStudent(t *testing.T) Student {
+	t.Helper()
+
+	birthdate, err := primitive.ParseBirthdate("1990-03-04")
+	require.NoError(t, err, "parse birthdate")
+
 	return Student{
 		Name:      "Ramdas Tifft",
-		Birthdate: time.Now(),
+		Birthdate: birthdate,
 		Email:     "r.tifft@gmail.com",
 	}
 }

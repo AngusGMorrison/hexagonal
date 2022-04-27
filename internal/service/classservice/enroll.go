@@ -25,49 +25,36 @@ func (svc *classService) Enroll(ctx context.Context, req EnrollmentRequest) erro
 		return fmt.Errorf("Enroll: %w", err)
 	}
 
-	if err := verifyStudentsAreRegistered(ctx, scribe, req.Students); err != nil {
-		return err
+	registeredStudents, err := scribe.GetStudentsByEmail(ctx, req.Students.EmailAddresses())
+	if err != nil {
+		return fmt.Errorf("ensureStudentsAreRegistered: %w", err)
 	}
 
-	if err := verifyStudentsNotAlreadyEnrolled(class, req.Students); err != nil {
-		return err
-	}
-
-	if !class.hasCapacityFor(req.Students) {
-		return OversubscribedError{
-			CourseCode:           class.Code,
-			AvailableSpaces:      class.availableSpaces(),
-			AttemptedEnrollments: uint32(len(req.Students)),
+	if len(registeredStudents) < len(req.Students) {
+		return UnregisteredStudentsError{
+			Students: slice.Difference(registeredStudents, req.Students),
 		}
 	}
 
-	_, err = scribe.EnrollStudents(ctx, class.Course, req.Students)
+	if err := verifyStudentsNotAlreadyEnrolled(class, registeredStudents); err != nil {
+		return err
+	}
+
+	if !class.hasCapacityFor(registeredStudents) {
+		return OversubscribedError{
+			CourseCode:           class.Code,
+			AvailableSpaces:      class.availableSpaces(),
+			AttemptedEnrollments: uint32(len(registeredStudents)),
+		}
+	}
+
+	_, err = scribe.EnrollStudents(ctx, class.Course, registeredStudents)
 	if err != nil {
 		return fmt.Errorf("Enroll: %w", err)
 	}
 
 	if err := scribe.Commit(); err != nil {
 		return fmt.Errorf("Enroll: %w", err)
-	}
-
-	return nil
-}
-
-func verifyStudentsAreRegistered(
-	ctx context.Context,
-	scribe AtomicClassScribe,
-	students Students,
-) error {
-	// Check that all students attempting to enroll are registered.
-	registeredStudents, err := scribe.GetStudentsByEmail(ctx, students.EmailAddresses())
-	if err != nil {
-		return fmt.Errorf("ensureStudentsAreRegistered: %w", err)
-	}
-
-	if len(registeredStudents) < len(students) {
-		return UnregisteredStudentsError{
-			Students: slice.Difference(registeredStudents, students),
-		}
 	}
 
 	return nil

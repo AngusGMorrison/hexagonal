@@ -1,5 +1,5 @@
-SELECT id, name, birthdate, email
-FROM students
-INNER JOIN enrollments
-ON students.id = enrollments.student_id
-WHERE enrollments.course_id = $1;
+SELECT s.id, s.name, s.birthdate, s.email
+FROM students s
+INNER JOIN enrollments e
+ON s.id = e.student_id
+WHERE e.course_id = $1;

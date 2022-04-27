@@ -10,27 +10,28 @@ import (
 // SliceToInArg takes a slice of strings, ints or uints and attempts to convert
 // it to a comma-separated string argument for the SQL IN operator.
 func SliceToInArg(slice any) (string, error) {
-	value := reflect.ValueOf(slice)
-	sliceKind := value.Kind()
+	sliceType := reflect.TypeOf(slice)
+	sliceKind := sliceType.Kind()
 	if sliceKind != reflect.Slice {
 		return "", SliceKindError{kind: sliceKind}
 	}
 
-	strs := make([]string, value.Len())
+	sliceValue := reflect.ValueOf(slice)
+	strs := make([]string, sliceValue.Len())
 
-	switch elemKind := value.Elem().Kind(); elemKind {
+	switch elemKind := sliceType.Elem().Kind(); elemKind {
 	case reflect.String:
-		for i := 0; i < value.Len(); i++ {
-			strs[i] = value.Index(i).String()
+		for i := 0; i < sliceValue.Len(); i++ {
+			strs[i] = sliceValue.Index(i).String()
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		for i := 0; i < value.Len(); i++ {
-			i64 := value.Index(i).Int()
+		for i := 0; i < sliceValue.Len(); i++ {
+			i64 := sliceValue.Index(i).Int()
 			strs[i] = strconv.FormatInt(i64, 10)
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		for i := 0; i < value.Len(); i++ {
-			u64 := value.Index(i).Uint()
+		for i := 0; i < sliceValue.Len(); i++ {
+			u64 := sliceValue.Index(i).Uint()
 			strs[i] = strconv.FormatUint(u64, 10)
 		}
 	default:

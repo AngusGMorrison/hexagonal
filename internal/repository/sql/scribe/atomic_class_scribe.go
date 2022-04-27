@@ -128,7 +128,7 @@ func studentsFromRows(sRows []students.Row) classservice.Students {
 		classStudent := classservice.Student{
 			ID:        s.ID,
 			Name:      s.Name,
-			Birthdate: s.Birthdate,
+			Birthdate: primitive.Birthdate(s.Birthdate),
 			Email:     s.Email,
 		}
 		classStudents = append(classStudents, classStudent)

@@ -37,7 +37,6 @@ func run() error {
 		return fmt.Errorf("postgres.NewDB: %w", err)
 	}
 
-	// TODO: Refactor
 	absSeedsPath, err := filepath.Abs(*seedsPath)
 	if err != nil {
 		return fmt.Errorf("create absolute seeds path: %w", err)

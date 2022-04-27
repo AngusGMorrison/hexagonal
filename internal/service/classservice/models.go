@@ -2,7 +2,6 @@ package classservice
 
 import (
 	"strings"
-	"time"
 
 	"github.com/angusgmorrison/hexagonal/internal/primitive"
 )
@@ -59,7 +58,7 @@ func (s Students) String() string {
 type Student struct {
 	ID        int64
 	Name      string
-	Birthdate time.Time
+	Birthdate primitive.Birthdate
 	Email     primitive.EmailAddress
 }
 
