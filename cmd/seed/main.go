@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/angusgmorrison/hexagonal/envconfig"
-	"github.com/angusgmorrison/hexagonal/repository/sql/database"
+	"github.com/angusgmorrison/hexagonal/internal/envconfig"
+	"github.com/angusgmorrison/hexagonal/internal/repository/sql/database"
 )
 
 func main() {
@@ -21,7 +21,7 @@ func main() {
 
 func run() error {
 	var (
-		defaultSeedsPath = filepath.Join("fixtures", "seeds", "seeds.sql")
+		defaultSeedsPath = filepath.Join("internal", "repository", "sql", "seeds", "seeds.sql")
 		seedsPath        = flag.String("path", defaultSeedsPath, "The location of the SQL seeds file to load")
 	)
 
@@ -37,7 +37,6 @@ func run() error {
 		return fmt.Errorf("postgres.NewDB: %w", err)
 	}
 
-	// TODO: Refactor
 	absSeedsPath, err := filepath.Abs(*seedsPath)
 	if err != nil {
 		return fmt.Errorf("create absolute seeds path: %w", err)

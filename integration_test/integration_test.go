@@ -12,12 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/angusgmorrison/hexagonal/envconfig"
-	"github.com/angusgmorrison/hexagonal/handler/rest"
-	server "github.com/angusgmorrison/hexagonal/handler/rest"
-	"github.com/angusgmorrison/hexagonal/repository/sql/database"
-	"github.com/angusgmorrison/hexagonal/repository/sql/scribe"
-	"github.com/angusgmorrison/hexagonal/service"
+	"github.com/angusgmorrison/hexagonal/internal/envconfig"
+	"github.com/angusgmorrison/hexagonal/internal/handler/rest"
+	server "github.com/angusgmorrison/hexagonal/internal/handler/rest"
+	"github.com/angusgmorrison/hexagonal/internal/repository/sql/database"
+	"github.com/angusgmorrison/hexagonal/internal/repository/sql/scribe"
+	"github.com/angusgmorrison/hexagonal/internal/service/classservice"
+	"github.com/go-playground/validator/v10"
 )
 
 const (
@@ -58,9 +59,10 @@ func NewServer(logger *log.Logger) (*server.Server, error) {
 	}
 
 	var (
-		btScribeFactory = scribe.NewBulkTransactionScribeFactory(db)
-		btService       = service.NewBulkTransactionService(logger, btScribeFactory)
-		server          = rest.NewServer(logger, envConfig, btService)
+		scribeFactory = scribe.NewAtomicClassScribeFactory(db)
+		validate      = validator.New()
+		service       = classservice.New(logger, validate, scribeFactory)
+		server        = rest.NewServer(logger, envConfig, service)
 	)
 
 	return server, nil
@@ -101,8 +103,8 @@ func defaultAppRoot() string {
 	return filepath.Join(string(filepath.Separator), "usr", "src", "app")
 }
 
-func bulkTransferURL() string {
-	return serverURL() + "/bulk_transfer"
+func enrollmentURL() string {
+	return serverURL() + "/enroll"
 }
 
 func serverURL() string {
