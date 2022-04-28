@@ -10,6 +10,7 @@ import (
 
 	"github.com/angusgmorrison/hexagonal/internal/primitive"
 	"github.com/angusgmorrison/hexagonal/internal/repository/sql"
+	"github.com/jmoiron/sqlx"
 )
 
 //go:embed queries
@@ -44,7 +45,7 @@ func OnCourse(ctx context.Context, q sql.Queryer, courseID int64) ([]Row, error)
 // given slice.
 func SelectByEmail(
 	ctx context.Context,
-	q sql.Queryer,
+	rq sql.RebindQueryer,
 	emails []primitive.EmailAddress,
 ) ([]Row, error) {
 	query, err := _queries.ReadFile("queries/select_students_by_email.sql")
@@ -52,15 +53,17 @@ func SelectByEmail(
 		return nil, fmt.Errorf("read queries/select_students_by_email.sql: %w", err)
 	}
 
-	results := make([]Row, 0, len(emails))
-
-	inArg, err := sql.SliceToInArg(emails)
+	inQuery, positionalArgs, err := sqlx.In(string(query), emails)
 	if err != nil {
-		return nil, fmt.Errorf("SelectByEmail: %w", err)
+		return nil, fmt.Errorf("generate IN query with emails: %w", err)
 	}
 
-	if err := q.Query(ctx, &results, string(query), inArg); err != nil {
-		return nil, fmt.Errorf("SelectByEmail(%q): %w", inArg, err)
+	boundQuery := rq.Rebind(inQuery)
+
+	results := make([]Row, 0, len(emails))
+
+	if err := rq.Query(ctx, &results, boundQuery, positionalArgs...); err != nil {
+		return nil, fmt.Errorf("SelectByEmail(%+v): %w", emails, err)
 	}
 
 	return results, nil

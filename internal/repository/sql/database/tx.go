@@ -49,6 +49,12 @@ func (tx *Tx) Bind(query string, arg any) (string, []any, error) {
 	return boundQuery, positionalArgs, nil
 }
 
+// Rebind converts a query with bind vars of one type to a query with bind vars
+// appropriate to the underlying database driver.
+func (tx *Tx) Rebind(query string) string {
+	return tx.sqlxTx.Rebind(query)
+}
+
 // Query executes the query and scans each row into dest, which must be a
 // pointer to a slice.
 func (tx *Tx) Query(ctx context.Context, dest any, query string, args ...any) error {

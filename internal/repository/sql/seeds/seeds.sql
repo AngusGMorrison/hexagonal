@@ -1,7 +1,7 @@
 INSERT INTO courses (title, code, capacity, description)
 VALUES (
   'Structure and Interpretation of Computer Programs',
-  'SCIP',
+  'SICP',
   5,
   'The classic introduction to computer programming.'
 );

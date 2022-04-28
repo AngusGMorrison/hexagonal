@@ -1,0 +1,144 @@
+{
+	"info": {
+		"_postman_id": "730c90b3-368b-401f-a53a-5ee7d16285c5",
+		"name": "Hexagonal",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "201 Created",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"course_title\": \"Structure and Interpretation of Computer Programs\",\n  \"course_code\": \"SICP\",\n  \"students\": [\n    {\n      \"name\": \"Dobrila Starr\",\n      \"birthdate\": \"1989-08-21\",\n      \"email\": \"dob.starr@googlemail.com\"\n    },\n    {\n      \"name\": \"Ampelius Fabian\",\n      \"birthdate\": \"1990-11-22\",\n      \"email\": \"amp-fab@btinternet.com\"\n    }\n  ]\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:3000/enroll",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"enroll"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "400 Bad Request",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"course_title\": \"Structure and Interpretation of Computer Programs\",\n  \"students\": [\n    {\n      \"name\":\n      \"birthdate\": \"1991-10-03\",\n      \"email\": \"r.tifft@gmail.com\"\n    }\n  ]\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:3000/enroll",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"enroll"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "422 Already Enrolled",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"course_title\": \"Structure and Interpretation of Computer Programs\",\n  \"course_code\": \"SICP\",\n  \"students\": [\n    {\n      \"name\": \"Kassandra Madhukar\",\n      \"birthdate\": \"1996-07-07\",\n      \"email\": \"km1996@gmail.com\"\n    }\n  ]\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:3000/enroll",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"enroll"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "422 Oversubscribed",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"course_title\": \"Structure and Interpretation of Computer Programs\",\n  \"course_code\": \"SICP\",\n  \"students\": [\n    {\n      \"name\": \"Dobrila Starr\",\n      \"birthdate\": \"1989-08-21\",\n      \"email\": \"dob.starr@googlemail.com\"\n    },\n    {\n      \"name\": \"Ampelius Fabian\",\n      \"birthdate\": \"1990-11-22\",\n      \"email\": \"amp-fab@btinternet.com\"\n    },\n        {\n      \"name\": \"Ramdas Tifft\",\n      \"birthdate\": \"1991-10-03\",\n      \"email\": \"r.tifft@gmail.com\"\n    }\n  ]\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:3000/enroll",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"enroll"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "422 Unregistered Student",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"course_title\": \"Structure and Interpretation of Computer Programs\",\n  \"course_code\": \"SICP\",\n  \"students\": [\n    {\n      \"name\": \"Svetlana Bernhard\",\n      \"birthdate\": \"2000-01-29\",\n      \"email\": \"sbernhard123@gmail.com\"\n    }\n  ]\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:3000/enroll",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"enroll"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

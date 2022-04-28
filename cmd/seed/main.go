@@ -21,7 +21,7 @@ func main() {
 
 func run() error {
 	var (
-		defaultSeedsPath = filepath.Join("fixtures", "seeds", "seeds.sql")
+		defaultSeedsPath = filepath.Join("internal", "repository", "sql", "seeds", "seeds.sql")
 		seedsPath        = flag.String("path", defaultSeedsPath, "The location of the SQL seeds file to load")
 	)
 

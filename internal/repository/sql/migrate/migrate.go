@@ -28,7 +28,6 @@ type Config struct {
 
 // Migrate triggers a migration on the database using the specified Config.
 func Migrate(databaseURL, migrationPath string, logger *log.Logger, config Config) error {
-	fmt.Println(migrationPath)
 	migrator, err := newMigrator(databaseURL, migrationPath, logger, config)
 	if err != nil {
 		return err

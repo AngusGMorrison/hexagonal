@@ -49,11 +49,28 @@ type BindQueryer interface {
 	Queryer
 }
 
+// Rebinder accepts a query with bind vars of one form (e.g. '?') and returns a
+// query with bind vars appropriate to the underlying database driver. This is
+// typically useful where queries are built dynamically, such as queries with IN
+// clauses. The table can construct the query without knowing the bind var of
+// the database.
+type Rebinder interface {
+	Rebind(query string) string
+}
+
+// RebindQueryer can rebind and execute a query.
+type RebindQueryer interface {
+	Rebinder
+	Queryer
+}
+
 // Transaction provides all the methods required to query a database atomically.
 type Transaction interface {
 	Transactor
 	Execer
-	BindQueryer
+	Queryer
+	Binder
+	Rebinder
 }
 
 // Beginner represents an object that can begin a transaction at some default

@@ -27,7 +27,7 @@ func (svc *classService) Enroll(ctx context.Context, req EnrollmentRequest) erro
 
 	registeredStudents, err := scribe.GetStudentsByEmail(ctx, req.Students.EmailAddresses())
 	if err != nil {
-		return fmt.Errorf("ensureStudentsAreRegistered: %w", err)
+		return fmt.Errorf("Enroll: %w", err)
 	}
 
 	if len(registeredStudents) < len(req.Students) {
