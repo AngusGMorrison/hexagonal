@@ -11,6 +11,7 @@ import (
 
 	"github.com/angusgmorrison/hexagonal/internal/primitive"
 	"github.com/go-playground/validator/v10"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,10 +22,10 @@ func TestEnroll(t *testing.T) {
 		t.Parallel()
 
 		var (
-			logger        = log.New(os.Stdout, "validates EnrollmentRequest ", log.LstdFlags)
-			validate      = validator.New()
-			scribeFactory = NewMockAtomicClassScribeFactory(t).Execute
-			service       = New(logger, validate, scribeFactory)
+			logger     = log.New(os.Stdout, "validates EnrollmentRequest ", log.LstdFlags)
+			validate   = validator.New()
+			atomicRepo = NewMockAtomicRepository(t)
+			service    = New(logger, validate, atomicRepo)
 		)
 
 		testCases := []struct {
@@ -68,20 +69,25 @@ func TestEnroll(t *testing.T) {
 		t.Parallel()
 
 		var (
-			logger        = log.New(os.Stdout, "validates course exists ", log.LstdFlags)
-			validate      = validator.New()
-			scribeFactory = NewMockAtomicClassScribeFactory(t)
-			scribe        = NewMockAtomicClassScribe(t)
-			service       = New(logger, validate, scribeFactory.Execute)
-			ctx           = context.Background()
-			req           = defaultEnrollmentRequest(t)
-			wantErr       = errors.New("course not found")
+			logger     = log.New(os.Stdout, "validates course exists ", log.LstdFlags)
+			validate   = validator.New()
+			atomicRepo = NewMockAtomicRepository(t)
+			repo       = NewMockRepository(t)
+			service    = New(logger, validate, atomicRepo)
+			ctx        = context.Background()
+			req        = defaultEnrollmentRequest(t)
+			wantErr    = errors.New("course not found")
 		)
 
-		scribeFactory.On("Execute").Return(scribe)
-		scribe.On("Begin", ctx).Return(nil)
-		scribe.On("Rollback").Return(nil)
-		scribe.On(
+		atomicRepo.On(
+			"Execute",
+			ctx,
+			mock.AnythingOfType("AtomicOperation"),
+		).Return(func(ctx context.Context, op AtomicOperation) error {
+			return op(ctx, repo)
+		})
+
+		repo.On(
 			"GetClassByCourseCode",
 			ctx,
 			req.CourseCode,
@@ -95,21 +101,31 @@ func TestEnroll(t *testing.T) {
 		t.Parallel()
 
 		var (
-			logger        = log.New(os.Stdout, "validates students are registered ", log.LstdFlags)
-			validate      = validator.New()
-			scribeFactory = NewMockAtomicClassScribeFactory(t)
-			scribe        = NewMockAtomicClassScribe(t)
-			service       = New(logger, validate, scribeFactory.Execute)
-			ctx           = context.Background()
-			req           = defaultEnrollmentRequest(t)
-			wantErr       = UnregisteredStudentsError{Students: req.Students}
+			logger     = log.New(os.Stdout, "validates students are registered ", log.LstdFlags)
+			validate   = validator.New()
+			atomicRepo = NewMockAtomicRepository(t)
+			repo       = NewMockRepository(t)
+			service    = New(logger, validate, atomicRepo)
+			ctx        = context.Background()
+			req        = defaultEnrollmentRequest(t)
+			wantErr    = UnregisteredStudentsError{Students: req.Students}
 		)
 
-		scribeFactory.On("Execute").Return(scribe)
-		scribe.On("Begin", ctx).Return(nil)
-		scribe.On("Rollback").Return(nil)
-		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(defaultClass(t), nil)
-		scribe.On(
+		atomicRepo.On(
+			"Execute",
+			ctx,
+			mock.AnythingOfType("AtomicOperation"),
+		).Return(func(ctx context.Context, op AtomicOperation) error {
+			return op(ctx, repo)
+		})
+
+		repo.On(
+			"GetClassByCourseCode",
+			ctx,
+			req.CourseCode,
+		).Return(defaultClass(t), nil)
+
+		repo.On(
 			"GetStudentsByEmail",
 			ctx,
 			req.Students.EmailAddresses(),
@@ -126,26 +142,35 @@ func TestEnroll(t *testing.T) {
 		t.Parallel()
 
 		var (
-			logger        = log.New(os.Stdout, "validates students are registered ", log.LstdFlags)
-			validate      = validator.New()
-			scribeFactory = NewMockAtomicClassScribeFactory(t)
-			scribe        = NewMockAtomicClassScribe(t)
-			service       = New(logger, validate, scribeFactory.Execute)
-			ctx           = context.Background()
-			req           = defaultEnrollmentRequest(t)
+			logger     = log.New(os.Stdout, "validates students are registered ", log.LstdFlags)
+			validate   = validator.New()
+			atomicRepo = NewMockAtomicRepository(t)
+			repo       = NewMockRepository(t)
+			service    = New(logger, validate, atomicRepo)
+			ctx        = context.Background()
+			req        = defaultEnrollmentRequest(t)
 		)
 
-		scribeFactory.On("Execute").Return(scribe)
-		scribe.On("Begin", ctx).Return(nil)
-		scribe.On("Rollback").Return(nil)
-		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(defaultClass(t), nil)
+		atomicRepo.On(
+			"Execute",
+			ctx,
+			mock.AnythingOfType("AtomicOperation"),
+		).Return(func(ctx context.Context, op AtomicOperation) error {
+			return op(ctx, repo)
+		})
+
+		repo.On(
+			"GetClassByCourseCode",
+			ctx,
+			req.CourseCode,
+		).Return(defaultClass(t), nil)
 
 		registeredStudent := defaultStudent(t)
 		registeredStudent.ID = 1
 		registeredStudents := Students{registeredStudent}
 		wantErr := AlreadyEnrolledError{Students: registeredStudents}
 
-		scribe.On(
+		repo.On(
 			"GetStudentsByEmail",
 			ctx,
 			req.Students.EmailAddresses(),
@@ -162,13 +187,13 @@ func TestEnroll(t *testing.T) {
 		t.Parallel()
 
 		var (
-			logger        = log.New(os.Stdout, "validates students are registered ", log.LstdFlags)
-			validate      = validator.New()
-			scribeFactory = NewMockAtomicClassScribeFactory(t)
-			scribe        = NewMockAtomicClassScribe(t)
-			service       = New(logger, validate, scribeFactory.Execute)
-			ctx           = context.Background()
-			req           = defaultEnrollmentRequest(t)
+			logger     = log.New(os.Stdout, "validates students are registered ", log.LstdFlags)
+			validate   = validator.New()
+			atomicRepo = NewMockAtomicRepository(t)
+			repo       = NewMockRepository(t)
+			service    = New(logger, validate, atomicRepo)
+			ctx        = context.Background()
+			req        = defaultEnrollmentRequest(t)
 		)
 
 		class := Class{
@@ -184,16 +209,25 @@ func TestEnroll(t *testing.T) {
 			AttemptedEnrollments: uint32(len(req.Students)),
 		}
 
-		scribeFactory.On("Execute").Return(scribe)
-		scribe.On("Begin", ctx).Return(nil)
-		scribe.On("Rollback").Return(nil)
-		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(class, nil)
+		atomicRepo.On(
+			"Execute",
+			ctx,
+			mock.AnythingOfType("AtomicOperation"),
+		).Return(func(ctx context.Context, op AtomicOperation) error {
+			return op(ctx, repo)
+		})
+
+		repo.On(
+			"GetClassByCourseCode",
+			ctx,
+			req.CourseCode,
+		).Return(class, nil)
 
 		registeredStudent := defaultStudent(t)
 		registeredStudent.ID = 1
 		registeredStudents := Students{registeredStudent}
 
-		scribe.On(
+		repo.On(
 			"GetStudentsByEmail",
 			ctx,
 			req.Students.EmailAddresses(),
@@ -210,13 +244,13 @@ func TestEnroll(t *testing.T) {
 		t.Parallel()
 
 		var (
-			logger        = log.New(os.Stdout, "validates students are registered ", log.LstdFlags)
-			validate      = validator.New()
-			scribeFactory = NewMockAtomicClassScribeFactory(t)
-			scribe        = NewMockAtomicClassScribe(t)
-			service       = New(logger, validate, scribeFactory.Execute)
-			ctx           = context.Background()
-			req           = defaultEnrollmentRequest(t)
+			logger     = log.New(os.Stdout, "validates students are registered ", log.LstdFlags)
+			validate   = validator.New()
+			atomicRepo = NewMockAtomicRepository(t)
+			repo       = NewMockRepository(t)
+			service    = New(logger, validate, atomicRepo)
+			ctx        = context.Background()
+			req        = defaultEnrollmentRequest(t)
 		)
 
 		class := Class{
@@ -226,27 +260,36 @@ func TestEnroll(t *testing.T) {
 			},
 		}
 
-		scribeFactory.On("Execute").Return(scribe)
-		scribe.On("Begin", ctx).Return(nil)
-		scribe.On("Rollback").Return(nil)
-		scribe.On("GetClassByCourseCode", ctx, req.CourseCode).Return(class, nil)
+		atomicRepo.On(
+			"Execute",
+			ctx,
+			mock.AnythingOfType("AtomicOperation"),
+		).Return(func(ctx context.Context, op AtomicOperation) error {
+			return op(ctx, repo)
+		})
+
+		repo.On(
+			"GetClassByCourseCode",
+			ctx,
+			req.CourseCode,
+		).Return(class, nil)
 
 		registeredStudent := defaultStudent(t)
 		registeredStudent.ID = 1
 		registeredStudents := Students{registeredStudent}
 
-		scribe.On(
+		repo.On(
 			"GetStudentsByEmail",
 			ctx,
 			req.Students.EmailAddresses(),
 		).Return(registeredStudents, nil)
-		scribe.On(
+
+		repo.On(
 			"EnrollStudents",
 			ctx,
 			class.Course,
 			registeredStudents,
 		).Return(class, nil)
-		scribe.On("Commit").Return(nil)
 
 		err := service.Enroll(ctx, req)
 		require.NoError(t, err)

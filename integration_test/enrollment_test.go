@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/angusgmorrison/hexagonal/internal/primitive"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/table/courses"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/table/enrollments"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/table/students"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/table/courses"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/table/enrollments"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/table/students"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

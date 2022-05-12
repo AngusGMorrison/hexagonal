@@ -4,6 +4,17 @@ package sql
 
 import "context"
 
+// Beginner represents an object that can begin a transaction at some default
+// isolation level.
+type Beginner interface {
+	Begin(ctx context.Context) (Tx, error)
+}
+
+// Serializer represents an object that can begin a serializable transaction.
+type Serializer interface {
+	BeginSerializable(ctx context.Context) (Tx, error)
+}
+
 // Committer commits atomic operations to the database.
 type Committer interface {
 	Commit() error
@@ -14,12 +25,6 @@ type Committer interface {
 // returns an error.
 type Rollbacker interface {
 	Rollback() error
-}
-
-// Transactor represents the methods of a transaction concerned with atomicity.
-type Transactor interface {
-	Committer
-	Rollbacker
 }
 
 // Execer executes a query that returns no result.
@@ -43,12 +48,6 @@ type Binder interface {
 	Bind(query string, arg any) (boundQuery string, positionalArgs []any, err error)
 }
 
-// BindQueryer can bind and execute a query with named parameters.
-type BindQueryer interface {
-	Binder
-	Queryer
-}
-
 // Rebinder accepts a query with bind vars of one form (e.g. '?') and returns a
 // query with bind vars appropriate to the underlying database driver. This is
 // typically useful where queries are built dynamically, such as queries with IN
@@ -58,37 +57,43 @@ type Rebinder interface {
 	Rebind(query string) string
 }
 
+// BindQueryer can bind and execute a query with named parameters.
+type BindQueryer interface {
+	Binder
+	Queryer
+}
+
 // RebindQueryer can rebind and execute a query.
 type RebindQueryer interface {
 	Rebinder
 	Queryer
 }
 
-// Transaction provides all the methods required to query a database atomically.
-type Transaction interface {
-	Transactor
+// Transactor represents the methods of a transaction concerned with atomicity.
+type Transactor interface {
+	Committer
+	Rollbacker
+}
+
+// TableOperator represents all the methods required to interact with database
+// tables.
+type TableOperator interface {
 	Execer
 	Queryer
 	Binder
 	Rebinder
 }
 
-// Beginner represents an object that can begin a transaction at some default
-// isolation level.
-type Beginner interface {
-	Begin(ctx context.Context) (Transaction, error)
+// Tx provides all the methods required to query a database atomically.
+type Tx interface {
+	Transactor
+	TableOperator
 }
 
-// Serializer represents an object that can begin a serializable transaction.
-type Serializer interface {
-	BeginSerializable(ctx context.Context) (Transaction, error)
-}
-
-// Database provides only the functionality of a database that application code
-// needs to be concerned with.
+// Database is the minimal representation of a relational database that powers
+// repositories.
 type Database interface {
 	Beginner
 	Serializer
-	Execer
-	BindQueryer
+	TableOperator
 }

@@ -69,7 +69,7 @@ After building the application, run migrations with `make migrate`. Use `make mi
 
 Alternatively, the database to be migrated is given by the `DB_NAME` environment variable, which defaults to `hexagonal_development`. To migrate the test database using this method, run `DB_NAME=hexagonal_test make migrate`.
 
-To seed the database, run `make seed`. The seeds to be loaded are found under `internal/repository/sql/seeds`.
+To seed the database, run `make seed`. The seeds to be loaded are found under `internal/storage/sql/seeds`.
 
 ### Schema
 `courses` and `students` are joined in a many-to-many relationship by the `enrollments` table.

@@ -1,60 +1,79 @@
-package scribe
+// Package classrepo provides implementations of
+// classservice.AtomicRepository and classservice.Repository for use with an SQL
+// database.
+package classrepo
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/angusgmorrison/hexagonal/internal/primitive"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/table/courses"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/table/enrollments"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/table/students"
 	"github.com/angusgmorrison/hexagonal/internal/service/classservice"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/table/courses"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/table/enrollments"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/table/students"
 )
 
-// AtomicClassScribe implements classservice.AtomicClassScribe, providing a
-// translation layer between database tables and business domain that performs
-// its operations atomically.
-type AtomicClassScribe struct {
-	*atomicScribe
+// AtomicRepository satisfies classservice.AtomicRepository.
+type AtomicRepository struct {
+	db sql.Database
 }
 
-// NewAtomicClassScribeFactory returns a scribe factory function that has
-// captured a reference to a database. This makes it trivial for business logic
-// to instantiate a new scribe for a single database transaction,
-// avoiding the need for complex thread safety measures.
-//
-// Scribes are single-use and short-lived by design. Each scribe returned by the
-// factory contains an active transaction against which the scribe's database
-// operations are run, so long-lived scribes will leak database connections.
-//
-// Attempts to reuse the scribe after the transaction is committed or rolled
-// back return errors.
-func NewAtomicClassScribeFactory(db sql.Database) classservice.AtomicClassScribeFactory {
-	return func() classservice.AtomicClassScribe {
-		return &AtomicClassScribe{
-			atomicScribe: &atomicScribe{db: db},
-		}
+var _ classservice.AtomicRepository = (*AtomicRepository)(nil)
+
+// NewAtomic instantiates a new AtomicRepository using the database provided.
+func NewAtomic(db sql.Database) *AtomicRepository {
+	return &AtomicRepository{db: db}
+}
+
+// Execute decorates the given AtomicOperation with a transaction. If the
+// AtomicOperation returns an error, the transaction is rolled back. Otherwise,
+// the transaction is committed.
+func (ar *AtomicRepository) Execute(
+	ctx context.Context,
+	op classservice.AtomicOperation,
+) error {
+	tx, err := ar.db.Begin(ctx)
+	if err != nil {
+		return err
 	}
+
+	defer func() { _ = tx.Rollback() }()
+
+	classRepoWithTransaction := Repository{operator: tx}
+
+	if err := op(ctx, &classRepoWithTransaction); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// GetClass returns a course and all its enrolled students from the class code
+// Repository satisfies classservice.Repository. It is agnostic as to whether
+// its sql.TableOperator is a database or transaction.
+type Repository struct {
+	operator sql.TableOperator
+}
+
+var _ classservice.Repository = (*Repository)(nil)
+
+// GetClass returns a course and all its enrolled students from the course code
 // provided.
-func (acs *AtomicClassScribe) GetClassByCourseCode(
+func (r *Repository) GetClassByCourseCode(
 	ctx context.Context,
 	courseCode string,
 ) (classservice.Class, error) {
-	tx, err := acs.getTx()
+	courseRow, err := courses.FindByCode(ctx, r.operator, courseCode)
 	if err != nil {
 		return classservice.Class{}, fmt.Errorf("GetClassByCourseCode(%q): %w", courseCode, err)
 	}
 
-	courseRow, err := courses.FindByCode(ctx, tx, courseCode)
-	if err != nil {
-		return classservice.Class{}, fmt.Errorf("GetClassByCourseCode(%q): %w", courseCode, err)
-	}
-
-	studentRows, err := students.OnCourse(ctx, tx, courseRow.ID)
+	studentRows, err := students.OnCourse(ctx, r.operator, courseRow.ID)
 	if err != nil {
 		return classservice.Class{}, fmt.Errorf("GetClassByCourseCode(%q): %w", courseCode, err)
 	}
@@ -62,16 +81,13 @@ func (acs *AtomicClassScribe) GetClassByCourseCode(
 	return classFromRows(courseRow, studentRows), nil
 }
 
-func (acs *AtomicClassScribe) GetStudentsByEmail(
+// GetStudentsByEmail returns all the students whose email addresses are
+// contained in the slice provided.
+func (r *Repository) GetStudentsByEmail(
 	ctx context.Context,
 	emails []primitive.EmailAddress,
 ) (classservice.Students, error) {
-	tx, err := acs.getTx()
-	if err != nil {
-		return nil, fmt.Errorf("GetStudentsByEmail(%v): %w", emails, err)
-	}
-
-	studentRows, err := students.SelectByEmail(ctx, tx, emails)
+	studentRows, err := students.SelectByEmail(ctx, r.operator, emails)
 	if err != nil {
 		return nil, fmt.Errorf("GetStudentsByEmail(%v): %w", emails, err)
 	}
@@ -81,24 +97,19 @@ func (acs *AtomicClassScribe) GetStudentsByEmail(
 
 // EnrollStudents enrolls the given students in a course and returns the latest
 // state of the class. Each student's ID field must be populated.
-func (acs *AtomicClassScribe) EnrollStudents(
+func (r *Repository) EnrollStudents(
 	ctx context.Context,
 	course classservice.Course,
 	stu classservice.Students,
 ) (classservice.Class, error) {
-	tx, err := acs.getTx()
-	if err != nil {
-		return classservice.Class{}, fmt.Errorf("EnrollStudents: %w", err)
-	}
-
 	rows := enrollmentRowsFromCouseAndStudents(course, stu)
 
-	rows, err = enrollments.Insert(ctx, tx, rows)
+	rows, err := enrollments.Insert(ctx, r.operator, rows)
 	if err != nil {
 		return classservice.Class{}, fmt.Errorf("EnrollStudents: %w", err)
 	}
 
-	class, err := acs.GetClassByCourseCode(ctx, course.Code)
+	class, err := r.GetClassByCourseCode(ctx, course.Code)
 	if err != nil {
 		return classservice.Class{}, fmt.Errorf("EnrollStudents: %w", err)
 	}

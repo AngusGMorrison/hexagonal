@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql"
 )
 
 func Truncate(ctx context.Context, exec sql.Execer) error {

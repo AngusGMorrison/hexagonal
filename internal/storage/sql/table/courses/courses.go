@@ -7,7 +7,7 @@ import (
 	"embed"
 	"fmt"
 
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql"
 )
 
 //go:embed queries

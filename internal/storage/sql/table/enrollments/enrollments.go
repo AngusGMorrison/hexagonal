@@ -7,7 +7,7 @@ import (
 	"embed"
 	"fmt"
 
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql"
 )
 
 // Row represents a row of the enrollments table.
