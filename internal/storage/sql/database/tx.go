@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	hexsql "github.com/angusgmorrison/hexagonal/internal/repository/sql"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -13,7 +13,7 @@ type Tx struct {
 	sqlxTx *sqlx.Tx
 }
 
-var _ hexsql.Transaction = (*Tx)(nil)
+var _ sql.Tx = (*Tx)(nil)
 
 // Commit commits the transaction to the database.
 func (tx *Tx) Commit() error {

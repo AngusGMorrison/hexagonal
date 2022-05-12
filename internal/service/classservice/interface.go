@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/angusgmorrison/hexagonal/internal/primitive"
-	"github.com/angusgmorrison/hexagonal/internal/service"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -21,27 +20,29 @@ type Interface interface {
 func New(
 	logger logger,
 	validate *validator.Validate,
-	scribeFactory AtomicClassScribeFactory,
+	repo AtomicRepository,
 ) Interface {
 	return &classService{
-		logger:          logger,
-		validate:        validate,
-		newAtomicScribe: scribeFactory,
+		logger:   logger,
+		validate: validate,
+		repo:     repo,
 	}
 }
 
 // classService implements classservice.Interface.
 type classService struct {
-	logger          logger
-	validate        *validator.Validate
-	newAtomicScribe AtomicClassScribeFactory
+	logger   logger
+	validate *validator.Validate
+	repo     AtomicRepository
 }
 
-// AtomicClassScribe represents a single-use, atomic connection to a repository
-// of class data.
-type AtomicClassScribe interface {
-	service.AtomicScribe
+type AtomicOperation func(context.Context, Repository) error
 
+type AtomicRepository interface {
+	Execute(context.Context, AtomicOperation) error
+}
+
+type Repository interface {
 	// GetClassByCourseCode loads a course and its students based on a course
 	// code.
 	GetClassByCourseCode(ctx context.Context, courseCode string) (Class, error)
@@ -53,9 +54,6 @@ type AtomicClassScribe interface {
 	// Enroll writes the enrollment of students in a class to a repository.
 	EnrollStudents(ctx context.Context, c Course, s Students) (Class, error)
 }
-
-// AtomicClassScribeFactory funcs return new, single-use scribes.
-type AtomicClassScribeFactory func() AtomicClassScribe
 
 type logger interface {
 	Printf(format string, args ...any)

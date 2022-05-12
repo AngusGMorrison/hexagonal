@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/angusgmorrison/hexagonal/internal/primitive"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql"
 	"github.com/jmoiron/sqlx"
 )
 

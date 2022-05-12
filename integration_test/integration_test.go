@@ -15,9 +15,9 @@ import (
 	"github.com/angusgmorrison/hexagonal/internal/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/handler/rest"
 	server "github.com/angusgmorrison/hexagonal/internal/handler/rest"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/database"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/scribe"
 	"github.com/angusgmorrison/hexagonal/internal/service/classservice"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/classrepo"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/database"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -59,10 +59,10 @@ func NewServer(logger *log.Logger) (*server.Server, error) {
 	}
 
 	var (
-		scribeFactory = scribe.NewAtomicClassScribeFactory(db)
-		validate      = validator.New()
-		service       = classservice.New(logger, validate, scribeFactory)
-		server        = rest.NewServer(logger, envConfig, service)
+		atomicRepo = classrepo.NewAtomic(db)
+		validate   = validator.New()
+		service    = classservice.New(logger, validate, atomicRepo)
+		server     = rest.NewServer(logger, envConfig, service)
 	)
 
 	return server, nil

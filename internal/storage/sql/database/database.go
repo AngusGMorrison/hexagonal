@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/angusgmorrison/hexagonal/internal/envconfig"
-	hexsql "github.com/angusgmorrison/hexagonal/internal/repository/sql"
+	hexsql "github.com/angusgmorrison/hexagonal/internal/storage/sql"
 	"github.com/jmoiron/sqlx"
 
 	// Load postgres driver
@@ -78,14 +78,20 @@ func (db *DB) Bind(query string, arg any) (string, []any, error) {
 	return boundQuery, positionalArgs, nil
 }
 
+// Rebind converts a query with bind vars of one type to a query with bind vars
+// appropriate to the underlying database driver.
+func (db *DB) Rebind(query string) string {
+	return db.sqlxDB.Rebind(query)
+}
+
 // BeginSerializable returns a new, serializable database transaction.
-func (db *DB) BeginSerializable(ctx context.Context) (hexsql.Transaction, error) {
+func (db *DB) BeginSerializable(ctx context.Context) (hexsql.Tx, error) {
 	return db.begin(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 }
 
 // Begin returns a new database transaction at the database's current isolation
 // level.
-func (db *DB) Begin(ctx context.Context) (hexsql.Transaction, error) {
+func (db *DB) Begin(ctx context.Context) (hexsql.Tx, error) {
 	return db.begin(ctx, nil)
 }
 

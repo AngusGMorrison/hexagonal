@@ -7,9 +7,9 @@ import (
 
 	"github.com/angusgmorrison/hexagonal/internal/envconfig"
 	"github.com/angusgmorrison/hexagonal/internal/handler/rest"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/database"
-	"github.com/angusgmorrison/hexagonal/internal/repository/sql/scribe"
 	"github.com/angusgmorrison/hexagonal/internal/service/classservice"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/classrepo"
+	"github.com/angusgmorrison/hexagonal/internal/storage/sql/database"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -41,10 +41,10 @@ func run(logger *log.Logger) error {
 	}()
 
 	var (
-		validate           = validator.New()
-		classScribeFactory = scribe.NewAtomicClassScribeFactory(db)
-		classService       = classservice.New(logger, validate, classScribeFactory)
-		server             = rest.NewServer(logger, envConfig, classService)
+		validate     = validator.New()
+		classRepo    = classrepo.NewAtomic(db)
+		classService = classservice.New(logger, validate, classRepo)
+		server       = rest.NewServer(logger, envConfig, classService)
 	)
 
 	return server.Run()
