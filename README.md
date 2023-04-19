@@ -1,5 +1,9 @@
 # Advanced Hexagonal Architecture Demo
 
+> ### Looking for a more recent and realistic example of Hexagonal Architecture in Go? Check out [my implementation of the RealWorld spec](https://github.com/AngusGMorrison/realworld-go).
+
+## What is this?
+
 An experiment in "extreme decoupling" that satisifies the following criteria:
 * Business logic is fully and rigorously decoupled from transport and persistence layers;
 * Business logic can perform atomic operations without directly manipulating a database or transaction object;
